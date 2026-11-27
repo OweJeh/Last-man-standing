@@ -21,3 +21,4 @@ ALTER TABLE public.winners
   DROP CONSTRAINT IF EXISTS winners_round_id_fkey,
   ADD CONSTRAINT winners_round_id_fkey
     FOREIGN KEY (round_id) REFERENCES public.raffle_rounds(id) ON DELETE CASCADE;
+

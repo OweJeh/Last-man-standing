@@ -129,12 +129,12 @@ export function LiveControlClient({
       ref={streamContainerRef}
       className={
         isMaximized
-          ? "h-screen w-screen bg-[#080808] px-4 py-3 flex flex-col justify-between gap-2.5 overflow-hidden"
-          : "space-y-4"
+          ? "h-screen w-screen bg-[#080808] flex flex-col overflow-hidden"
+          : "flex flex-col gap-4"
       }
     >
       {/* Top Stream Header Bar with Maximize Button */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-[#111111] px-4 py-2.5">
+      <div className={`shrink-0 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-[#111111] px-4 py-2.5${isMaximized ? " mx-4 mt-3" : ""}`}>
         <div className="flex flex-wrap items-center gap-3 text-xs">
           <Badge variant={round.status === "running" ? "live" : "default"}>
             {round.status === "running" && <Radio className="h-3 w-3 animate-pulse" />}
@@ -189,32 +189,34 @@ export function LiveControlClient({
       </div>
 
       {error && (
-        <div className="rounded-md border border-[#FF2020]/40 bg-[#FF2020]/10 p-3 text-xs text-[#FF2020]">
+        <div className={`shrink-0 rounded-md border border-[#FF2020]/40 bg-[#FF2020]/10 p-3 text-xs text-[#FF2020]${isMaximized ? " mx-4" : ""}`}>
           {error}
         </div>
       )}
 
-      {/* Primary Broadcast Arena (Grid / Final Six / Winner Reveal) */}
-      <div className={isMaximized ? "flex-1 min-h-0 overflow-y-auto flex flex-col" : ""}>
-        <LiveBroadcastClient
-          embedded
-          compact={isMaximized}
-          initialRound={round}
-          initialParticipants={participants}
-          initialStageResults={stageResults}
-          initialWinners={winners}
-          initialEvents={events}
-          replayStage={replayStage}
-          replayKey={replayKey}
-        />
+      {/* Primary Broadcast Arena — fills remaining space in fullscreen, natural height otherwise */}
+      <div className={isMaximized ? "flex-1 min-h-0 overflow-hidden px-4" : ""}>
+        <div className={isMaximized ? "h-full overflow-y-auto" : ""}>
+          <LiveBroadcastClient
+            embedded
+            compact={isMaximized}
+            initialRound={round}
+            initialParticipants={participants}
+            initialStageResults={stageResults}
+            initialWinners={winners}
+            initialEvents={events}
+            replayStage={replayStage}
+            replayKey={replayKey}
+          />
+        </div>
       </div>
 
-      {/* Compact Control Dock Below Arena (stays accessible even when maximized) */}
+      {/* Control Dock — always visible at the bottom in both modes */}
       <div
         className={
           isMaximized
-            ? "shrink-0 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/15 bg-[#111111]/95 backdrop-blur-md px-4 py-2 shadow-2xl"
-            : "sticky bottom-3 z-30 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/15 bg-[#111111]/95 backdrop-blur-md px-4 py-2.5 shadow-2xl"
+            ? "shrink-0 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/15 bg-[#111111]/95 backdrop-blur-md px-4 py-2 mx-4 mb-3 shadow-2xl"
+            : "flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/15 bg-[#111111]/95 backdrop-blur-md px-4 py-2.5 shadow-2xl"
         }
       >
         <div className="flex items-center gap-2 text-[11px] text-[#999999] min-w-0">
