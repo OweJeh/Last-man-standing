@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
 import confetti from "canvas-confetti";
 import { Trophy, Award } from "lucide-react";
@@ -28,12 +28,19 @@ export function WinnerRevealStage({
   const [revealedPositions, setRevealedPositions] = useState<Set<number>>(
     () => (reducedMotion ? new Set([1, 2, 3]) : new Set())
   );
+  const revealedStartedRef = useRef(false);
+  const soundEnabledRef = useRef(soundEnabled);
+  soundEnabledRef.current = soundEnabled;
+  const winnersKey = winners.map((w) => w.id).join(",");
 
   useEffect(() => {
     if (reducedMotion || winners.length === 0) {
       setRevealedPositions(new Set([1, 2, 3]));
       return;
     }
+
+    if (revealedStartedRef.current) return;
+    revealedStartedRef.current = true;
 
     const t1 = setTimeout(() => {
       setRevealedPositions((prev) => new Set(prev).add(3));
@@ -45,7 +52,7 @@ export function WinnerRevealStage({
 
     const t3 = setTimeout(() => {
       setRevealedPositions((prev) => new Set(prev).add(1));
-      playWinnerFanfare(soundEnabled);
+      playWinnerFanfare(soundEnabledRef.current);
       confetti({
         particleCount: 110,
         spread: 80,
@@ -59,7 +66,8 @@ export function WinnerRevealStage({
       clearTimeout(t2);
       clearTimeout(t3);
     };
-  }, [winners, reducedMotion, soundEnabled]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [winnersKey, reducedMotion]);
 
   const byPos = (pos: 1 | 2 | 3) => winners.find((w) => w.position === pos);
   const displayOrder: Array<1 | 2 | 3> = [2, 1, 3]; // Podium center = 1st place

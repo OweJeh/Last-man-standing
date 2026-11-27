@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { cn } from "@/lib/utils";
-import { playEliminationPulse } from "@/lib/sound";
+import { playEliminationPulse, playScannerTick } from "@/lib/sound";
 import { WinnerRevealStage } from "./winner-reveal-stage";
 import type { PublicParticipant, StageResult, Winner } from "@/types/database";
 
@@ -17,6 +17,8 @@ interface FinalSixStageProps {
   showPodiumImmediately?: boolean;
   onComplete: () => void;
 }
+
+type StagePhase = "eliminating" | "countdown" | "podium";
 
 export function FinalSixStage({
   finalSixParticipants,
@@ -34,25 +36,39 @@ export function FinalSixStage({
   const [shakingNumber, setShakingNumber] = useState<number | null>(null);
   const [droppedNumbers, setDroppedNumbers] = useState<Set<number>>(new Set());
   const [phaseLabel, setPhaseLabel] = useState("THE FINAL SIX");
-  const [showPodium, setShowPodium] = useState(
-    () => showPodiumImmediately && winners.length > 0
+  const [countdownText, setCountdownText] = useState<string | null>(null);
+  const [phase, setPhase] = useState<StagePhase>(() =>
+    showPodiumImmediately && winners.length > 0 ? "podium" : "eliminating"
   );
-  const initialImmediateRef = React.useRef(showPodiumImmediately && winners.length > 0);
+
+  // Refs prevent parent re-renders / Realtime updates from re-triggering the sequence
+  const initialImmediateRef = useRef(showPodiumImmediately && winners.length > 0);
+  const startedRef = useRef(false);
+  const soundEnabledRef = useRef(soundEnabled);
+  soundEnabledRef.current = soundEnabled;
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
+  const winnersCountRef = useRef(winners.length);
+  winnersCountRef.current = winners.length;
+
+  const hasStage5 = Boolean(stage5Result && stage5Result.elimination_sequence?.length >= 3);
+  const stage5Id = stage5Result?.id ?? null;
 
   useEffect(() => {
     if (initialImmediateRef.current) {
-      setShowPodium(true);
-      onComplete();
+      setPhase("podium");
+      onCompleteRef.current();
       return;
     }
 
-    if (!stage5Result) return;
+    if (!stage5Result || !hasStage5 || startedRef.current) return;
+    startedRef.current = true;
 
     const seq = stage5Result.elimination_sequence;
     if (reducedMotion || seq.length < 3) {
       setDroppedNumbers(new Set(stage5Result.eliminated_numbers));
-      setShowPodium(winners.length > 0);
-      onComplete();
+      setPhase(winnersCountRef.current > 0 ? "podium" : "eliminating");
+      onCompleteRef.current();
       return;
     }
 
@@ -96,7 +112,7 @@ export function FinalSixStage({
             next.add(targetNum);
             return next;
           });
-          playEliminationPulse(soundEnabled);
+          playEliminationPulse(soundEnabledRef.current);
           setPhaseLabel(`NUMBER #${targetNum} ELIMINATED`);
         }, delayStart + 3400)
       );
@@ -106,28 +122,65 @@ export function FinalSixStage({
     runStep(1, 4500);
     runStep(2, 8500);
 
+    // Beat on Final Three Standing
     timers.push(
       setTimeout(() => {
         if (cancelled) return;
         setPhaseLabel("FINAL THREE STANDING");
-        onComplete();
-      }, 12800)
+        onCompleteRef.current();
+      }, 12700)
+    );
+
+    // Transition to Suspense Countdown inside the same card
+    timers.push(
+      setTimeout(() => {
+        if (cancelled) return;
+        setPhase("countdown");
+        setCountdownText(null);
+      }, 13900)
     );
 
     timers.push(
       setTimeout(() => {
         if (cancelled) return;
-        setShowPodium(true);
-      }, 13700)
+        setCountdownText("3");
+        playScannerTick(soundEnabledRef.current);
+      }, 15700)
+    );
+
+    timers.push(
+      setTimeout(() => {
+        if (cancelled) return;
+        setCountdownText("2");
+        playScannerTick(soundEnabledRef.current);
+      }, 16700)
+    );
+
+    timers.push(
+      setTimeout(() => {
+        if (cancelled) return;
+        setCountdownText("1");
+        playScannerTick(soundEnabledRef.current);
+      }, 17700)
+    );
+
+    // Reveal Official Podium on the exact same card
+    timers.push(
+      setTimeout(() => {
+        if (cancelled) return;
+        setPhase("podium");
+      }, 18700)
     );
 
     return () => {
       cancelled = true;
       timers.forEach(clearTimeout);
     };
-  }, [stage5Result, reducedMotion, soundEnabled, onComplete, winners.length]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stage5Id, hasStage5, reducedMotion]);
 
-  const isPodiumVisible = showPodium && winners.length > 0;
+  const isPodiumVisible = phase === "podium" && winners.length > 0;
+  const isCountdown = phase === "countdown";
 
   return (
     <div
@@ -136,6 +189,8 @@ export function FinalSixStage({
         compact ? "p-5 sm:p-7" : "p-6 sm:p-10",
         isPodiumVisible
           ? "border-[#D8B66B]/40 bg-[#080808] shadow-[0_0_90px_rgba(216,182,107,0.12)]"
+          : isCountdown
+          ? "border-[#D8B66B]/30 bg-[#050505] shadow-[0_0_80px_rgba(216,182,107,0.1)]"
           : "border-[#EF3038]/30 bg-[#050505] shadow-[0_0_80px_rgba(239,48,56,0.12)]"
       )}
     >
@@ -145,7 +200,7 @@ export function FinalSixStage({
         className={cn(
           "pointer-events-none absolute inset-x-0 top-0 transition-all duration-700",
           compact ? "h-44" : "h-64",
-          isPodiumVisible
+          isPodiumVisible || isCountdown
             ? "bg-[radial-gradient(ellipse_at_top,rgba(216,182,107,0.18),transparent_70%)]"
             : "bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.12),transparent_70%)]"
         )}
@@ -167,6 +222,57 @@ export function FinalSixStage({
               soundEnabled={soundEnabled}
               reducedMotion={reducedMotion}
             />
+          </motion.div>
+        ) : isCountdown ? (
+          <motion.div
+            key="countdown"
+            initial={reducedMotion ? false : { opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={reducedMotion ? undefined : { opacity: 0, scale: 1.04 }}
+            transition={{ duration: 0.45, ease: "easeOut" }}
+            className={cn(
+              "relative flex flex-col items-center justify-center text-center",
+              compact ? "min-h-[260px] py-6" : "min-h-[320px] py-10"
+            )}
+          >
+            <span className="inline-block rounded-full border border-[#D8B66B]/40 bg-[#D8B66B]/10 px-3.5 py-1 text-xs font-bold uppercase tracking-[0.22em] text-[#D8B66B]">
+              Final Three Locked
+            </span>
+            <h3
+              className={cn(
+                "mt-4 font-display font-bold tracking-wide text-white uppercase max-w-xl",
+                compact ? "text-xl sm:text-3xl" : "text-2xl sm:text-4xl"
+              )}
+            >
+              Let&apos;s Get Ready For The Grand Prize Winners
+            </h3>
+
+            <div className="mt-6 h-24 flex items-center justify-center">
+              <AnimatePresence mode="wait">
+                {countdownText ? (
+                  <motion.span
+                    key={countdownText}
+                    initial={{ scale: 0.5, opacity: 0 }}
+                    animate={{ scale: 1.15, opacity: 1 }}
+                    exit={{ scale: 1.4, opacity: 0 }}
+                    transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                    className="font-display text-7xl sm:text-8xl font-bold text-[#D8B66B] tabular-nums drop-shadow-[0_0_28px_rgba(216,182,107,0.55)]"
+                  >
+                    {countdownText}
+                  </motion.span>
+                ) : (
+                  <motion.span
+                    key="ready-pulse"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="text-xs sm:text-sm font-semibold uppercase tracking-[0.3em] text-[#999999]"
+                  >
+                    In...
+                  </motion.span>
+                )}
+              </AnimatePresence>
+            </div>
           </motion.div>
         ) : (
           <motion.div
@@ -237,4 +343,3 @@ export function FinalSixStage({
     </div>
   );
 }
-
