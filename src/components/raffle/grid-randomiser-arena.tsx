@@ -200,30 +200,30 @@ export function GridRandomiserArena({
   }, [latestStageNumber, reducedMotion]);
 
   const count = stageParticipants.length;
-  let gridColsClass = "grid-cols-10";
+  let gridColsClass = compact ? "grid-cols-10 grid-rows-10 h-full" : "grid-cols-10";
   let tileSizeClass = compact
-    ? "h-9 sm:h-10 lg:h-12 text-sm sm:text-base"
+    ? "h-full min-h-0 text-xs sm:text-sm lg:text-base"
     : "h-11 sm:h-12 text-sm sm:text-base";
-  let gridMaxWidthClass = "";
+  let gridMaxWidthClass = compact ? "w-full" : "";
 
   if (count <= 12) {
-    gridColsClass = "grid-cols-3 sm:grid-cols-4";
+    gridColsClass = compact ? "grid-cols-4 grid-rows-3 h-full" : "grid-cols-3 sm:grid-cols-4";
     tileSizeClass = compact
-      ? "h-20 sm:h-24 lg:h-28 text-2xl sm:text-3xl"
+      ? "h-full min-h-0 text-2xl sm:text-3xl"
       : "h-20 sm:h-24 text-xl sm:text-2xl";
-    gridMaxWidthClass = compact ? "max-w-sm mx-auto" : "";
+    gridMaxWidthClass = compact ? "max-w-2xl w-full mx-auto" : "";
   } else if (count <= 25) {
-    gridColsClass = "grid-cols-5";
+    gridColsClass = compact ? "grid-cols-5 grid-rows-5 h-full" : "grid-cols-5";
     tileSizeClass = compact
-      ? "h-16 sm:h-20 text-xl sm:text-2xl"
+      ? "h-full min-h-0 text-xl sm:text-2xl"
       : "h-14 sm:h-18 text-lg sm:text-xl";
-    gridMaxWidthClass = compact ? "max-w-lg mx-auto" : "";
+    gridMaxWidthClass = compact ? "max-w-3xl w-full mx-auto" : "";
   } else if (count <= 50) {
-    gridColsClass = "grid-cols-5 sm:grid-cols-10";
+    gridColsClass = compact ? "grid-cols-10 grid-rows-5 h-full" : "grid-cols-5 sm:grid-cols-10";
     tileSizeClass = compact
-      ? "h-11 sm:h-13 text-base sm:text-lg"
+      ? "h-full min-h-0 text-base sm:text-lg"
       : "h-12 sm:h-14 text-base sm:text-lg";
-    gridMaxWidthClass = "";
+    gridMaxWidthClass = compact ? "w-full" : "";
   }
 
   const totalToEliminate = latestResult?.elimination_sequence?.length ?? 0;
@@ -243,13 +243,13 @@ export function GridRandomiserArena({
       : null;
 
   return (
-    <div className={compact ? "flex flex-col items-center space-y-2.5 w-full" : "space-y-5"}>
+    <div className={compact ? "flex flex-col items-center gap-2 w-full h-full min-h-0 overflow-hidden" : "space-y-5"}>
       {/* Active Elimination Spotlight & Progress Bar */}
       {isAnimating && latestResult && (
         <div
           className={cn(
-            "rounded-xl border border-[#EF3038]/50 bg-[#141414] shadow-[0_0_30px_rgba(239,48,56,0.12)]",
-            compact ? "px-3.5 py-2.5 space-y-2" : "p-4 space-y-3"
+            "shrink-0 w-full rounded-xl border border-[#EF3038]/50 bg-[#141414] shadow-[0_0_30px_rgba(239,48,56,0.12)]",
+            compact ? "px-3.5 py-2 space-y-1.5" : "p-4 space-y-3"
           )}
         >
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -313,13 +313,16 @@ export function GridRandomiserArena({
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
-            className="rounded-lg border border-[#EF3038]/50 bg-[#EF3038]/10 px-4 py-3 text-center"
+            className={cn(
+              "shrink-0 w-full rounded-lg border border-[#EF3038]/50 bg-[#EF3038]/10 text-center",
+              compact ? "px-3 py-1.5 flex items-center justify-center gap-3" : "px-4 py-3"
+            )}
           >
-            <p className="font-display text-lg sm:text-2xl font-bold tracking-[0.14em] text-white uppercase">
+            <p className={cn("font-display font-bold tracking-[0.14em] text-white uppercase", compact ? "text-sm sm:text-base" : "text-lg sm:text-2xl")}>
               {announcement}
             </p>
             {latestResult && (
-              <p className="text-xs text-[#999999] mt-0.5">
+              <p className={cn("text-xs text-[#999999]", compact ? "" : "mt-0.5")}>
                 Stage {latestResult.stage_number} published{" "}
                 {formatDateTime(latestResult.published_at)}
               </p>
@@ -329,7 +332,7 @@ export function GridRandomiserArena({
       </AnimatePresence>
 
       {/* Interactive Tile Inspector Bar */}
-      {inspectedParticipant && (
+      {inspectedParticipant && !compact && (
         <div className="flex items-center justify-between rounded-lg border border-white/15 bg-[#141414] px-4 py-2 text-xs">
           <span>
             <strong className="font-display text-sm text-white">
@@ -360,7 +363,7 @@ export function GridRandomiserArena({
       <div
         className={cn(
           "relative rounded-2xl border border-white/15 bg-[#080808] shadow-[0_0_60px_rgba(0,0,0,0.9)] overflow-hidden",
-          compact ? "p-2.5 sm:p-3.5 w-full" : "p-3 sm:p-6"
+          compact ? "p-2.5 sm:p-3 w-full flex-1 min-h-0 flex items-center justify-center" : "p-3 sm:p-6"
         )}
       >
         {isAnimating && (
@@ -370,7 +373,7 @@ export function GridRandomiserArena({
           />
         )}
 
-        <div className={cn("grid", compact ? "gap-2 sm:gap-2.5" : "gap-2 sm:gap-2.5", gridColsClass, gridMaxWidthClass)}>
+        <div className={cn("grid", compact ? "gap-1.5 sm:gap-2" : "gap-2 sm:gap-2.5", gridColsClass, gridMaxWidthClass)}>
           {stageParticipants.map((p) => {
             const num = p.assigned_number;
             const isScanning = scanningNumber === num;

@@ -152,15 +152,15 @@ export function LiveControlClient({
       ref={streamContainerRef}
       className={
         isMaximized
-          ? "h-screen w-screen bg-[#080808] relative overflow-hidden"
+          ? "h-screen w-screen bg-[#080808] grid grid-rows-[auto_1fr_auto] overflow-hidden"
           : "flex flex-col gap-4"
       }
     >
-      {/* Top Stream Header Bar — sits above the arena in normal, overlaid at top in fullscreen */}
+      {/* Top Stream Header Bar */}
       <div
         className={
           isMaximized
-            ? "absolute top-0 left-0 right-0 z-30 flex flex-wrap items-center justify-between gap-3 border-b border-white/10 bg-[#080808]/90 backdrop-blur-md px-4 py-2"
+            ? "flex flex-wrap items-center justify-between gap-3 border-b border-white/10 bg-[#0d0d0d] px-4 py-2"
             : "flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-[#111111] px-4 py-2.5"
         }
       >
@@ -199,7 +199,7 @@ export function LiveControlClient({
             variant="secondary"
             size="sm"
             onClick={toggleMaximize}
-            className="h-8 text-xs"
+            className="hidden md:inline-flex h-8 text-xs"
             title={isMaximized ? "Exit Fullscreen" : "Maximize Arena for Streaming"}
           >
             {isMaximized ? (
@@ -217,20 +217,19 @@ export function LiveControlClient({
         </div>
       </div>
 
-      {error && (
-        <div className={`rounded-md border border-[#FF2020]/40 bg-[#FF2020]/10 p-3 text-xs text-[#FF2020]${isMaximized ? " absolute top-12 left-4 right-4 z-30" : ""}`}>
-          {error}
-        </div>
-      )}
-
-      {/* Primary Broadcast Arena — full area in fullscreen (padded for HUD bars), natural in normal */}
+      {/* Primary Broadcast Arena — strictly fits the remaining desktop screen height in fullscreen */}
       <div
         className={
           isMaximized
-            ? "absolute inset-0 pt-[44px] pb-[56px] overflow-y-auto flex flex-col items-center justify-center"
+            ? "min-h-0 w-full h-full overflow-hidden px-4 py-2 flex flex-col items-center justify-center relative"
             : ""
         }
       >
+        {error && (
+          <div className={`rounded-md border border-[#FF2020]/40 bg-[#FF2020]/10 p-3 text-xs text-[#FF2020]${isMaximized ? " absolute top-2 left-4 right-4 z-30" : " mb-4"}`}>
+            {error}
+          </div>
+        )}
         <LiveBroadcastClient
           embedded
           compact={isMaximized}
@@ -244,11 +243,11 @@ export function LiveControlClient({
         />
       </div>
 
-      {/* Control Dock — absolute HUD bar pinned to bottom in fullscreen, plain bar in normal */}
+      {/* Control Dock — always visible directly beneath the grid */}
       <div
         className={
           isMaximized
-            ? "absolute bottom-0 left-0 right-0 z-30 flex flex-wrap items-center justify-between gap-3 border-t border-white/15 bg-[#080808]/90 backdrop-blur-md px-4 py-2 shadow-2xl"
+            ? "flex flex-wrap items-center justify-between gap-3 border-t border-white/15 bg-[#0d0d0d] px-4 py-2 shadow-2xl"
             : "flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/15 bg-[#111111]/95 backdrop-blur-md px-4 py-2.5 shadow-2xl"
         }
       >
