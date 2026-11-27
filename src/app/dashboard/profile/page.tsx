@@ -1,6 +1,7 @@
 import React from "react";
 import { requireUser, getCurrentProfile } from "@/lib/auth";
 import { signOutAction } from "@/app/actions/auth";
+import { emailToPhone } from "@/lib/validations";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -19,12 +20,10 @@ export default async function DashboardProfilePage() {
           <span className="font-semibold text-white">{profile?.full_name}</span>
         </div>
         <div>
-          <span className="text-xs uppercase text-[#999999] block">Email Address</span>
-          <span className="font-semibold text-white">{profile?.email}</span>
-        </div>
-        <div>
           <span className="text-xs uppercase text-[#999999] block">Phone Number</span>
-          <span className="font-semibold text-white">{profile?.phone || "Not set"}</span>
+          <span className="font-semibold text-white">
+            {profile?.phone || emailToPhone(profile?.email ?? "") || "Not set"}
+          </span>
         </div>
         <div>
           <span className="text-xs uppercase text-[#999999] block">Role</span>

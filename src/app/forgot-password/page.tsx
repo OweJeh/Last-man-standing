@@ -2,28 +2,33 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { Loader2, MailCheck } from "lucide-react";
+import { Loader2, Smartphone, CheckCircle2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { phoneToEmail } from "@/lib/validations";
 import { Wordmark } from "@/components/brand/wordmark";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function ForgotPasswordPage() {
-  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!phone.trim()) return;
     setLoading(true);
     setError(null);
 
     const supabase = createClient();
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
-    });
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+      phoneToEmail(phone),
+      {
+        redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
+      }
+    );
 
     setLoading(false);
     if (resetError) {
@@ -43,16 +48,17 @@ export default function ForgotPasswordPage() {
         <CardHeader>
           <CardTitle className="text-2xl">Reset Password</CardTitle>
           <p className="text-sm text-[#999999]">
-            Enter your account email and we will send you a password recovery link.
+            Enter your registered phone number and we will send you a password reset link.
           </p>
         </CardHeader>
         <CardContent>
           {sent ? (
             <div className="space-y-4 text-center py-4">
-              <MailCheck className="h-10 w-10 text-[#36B879] mx-auto" />
+              <CheckCircle2 className="h-10 w-10 text-[#36B879] mx-auto" />
               <p className="text-sm text-[#999999]">
-                If an account exists for <strong className="text-white">{email}</strong>,
-                a reset link has been sent.
+                If an account exists for{" "}
+                <strong className="text-white">{phone.replace(/\D/g, "")}</strong>, a
+                reset link has been dispatched. Check your registered contact.
               </p>
               <Link href="/login">
                 <Button variant="secondary" className="w-full">
@@ -68,14 +74,20 @@ export default function ForgotPasswordPage() {
                 </div>
               )}
               <div>
-                <Label htmlFor="email">Email Address</Label>
+                <Label htmlFor="phone">
+                  <span className="flex items-center gap-1.5">
+                    <Smartphone className="h-3.5 w-3.5 text-[#EF3038]" />
+                    Phone Number
+                  </span>
+                </Label>
                 <Input
-                  id="email"
-                  type="email"
+                  id="phone"
+                  type="tel"
                   required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="0241234567"
+                  autoComplete="tel"
                 />
               </div>
               <Button type="submit" className="w-full" disabled={loading}>

@@ -1,15 +1,33 @@
 import { z } from "zod";
 import { sanitizeDisplayName } from "./utils";
 
+// ---------------------------------------------------------------------------
+// Phone ↔ synthetic-email helpers
+// Phone numbers are stored as digits@lms.com in Supabase auth so we never
+// expose a real email to users while keeping standard email+password auth.
+// ---------------------------------------------------------------------------
+
+/** Strip all non-digit characters and return the synthetic email address. */
+export function phoneToEmail(phone: string): string {
+  const digits = phone.replace(/\D/g, "");
+  return `${digits}@lms.com`;
+}
+
+/** Extract the display phone number from a synthetic @lms.com email. */
+export function emailToPhone(email: string): string {
+  return email.replace(/@lms\.com$/, "");
+}
+
+// Ghana phone: 10 digits starting with 0, or +233 followed by 9 digits
+const ghanaPhoneRegex = /^(\+?233|0)\d{9}$/;
+
 export const registerSchema = z
   .object({
     fullName: z.string().trim().min(2, "Full name must be at least 2 characters").max(80),
-    email: z.string().trim().email("Enter a valid email address"),
     phone: z
       .string()
       .trim()
-      .min(9, "Enter a valid phone number")
-      .max(20, "Phone number is too long"),
+      .regex(ghanaPhoneRegex, "Enter a valid Ghana phone number (e.g. 0241234567)"),
     password: z.string().min(8, "Password must be at least 8 characters"),
     confirmPassword: z.string(),
   })
@@ -19,7 +37,11 @@ export const registerSchema = z
   });
 
 export const loginSchema = z.object({
-  email: z.string().trim().email("Enter a valid email address"),
+  phone: z
+    .string()
+    .trim()
+    .min(9, "Enter your phone number")
+    .max(20, "Phone number is too long"),
   password: z.string().min(1, "Password is required"),
 });
 

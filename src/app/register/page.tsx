@@ -4,9 +4,9 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, CheckCircle2, UserPlus } from "lucide-react";
+import { Loader2, CheckCircle2, UserPlus, Smartphone } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { registerSchema } from "@/lib/validations";
+import { registerSchema, phoneToEmail } from "@/lib/validations";
 import { Wordmark } from "@/components/brand/wordmark";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
@@ -30,14 +30,15 @@ export default function RegisterPage() {
   const onSubmit = async (values: RegisterValues) => {
     setError(null);
     const supabase = createClient();
+    const syntheticEmail = phoneToEmail(values.phone);
+
     const { error: authError } = await supabase.auth.signUp({
-      email: values.email,
+      email: syntheticEmail,
       password: values.password,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
         data: {
           full_name: values.fullName,
-          phone: values.phone,
+          phone: values.phone.replace(/\D/g, ""),
         },
       },
     });
@@ -64,7 +65,8 @@ export default function RegisterPage() {
           </div>
           <CardTitle className="text-2xl">Create Account</CardTitle>
           <p className="text-sm text-[#999999]">
-            Register once to enter raffles, submit MoMo payments, and claim your numbers.
+            Register with your phone number to enter raffles, submit MoMo payments, and
+            claim your numbers.
           </p>
         </CardHeader>
 
@@ -72,10 +74,10 @@ export default function RegisterPage() {
           {success ? (
             <div className="space-y-4 text-center py-4">
               <CheckCircle2 className="h-12 w-12 text-[#36B879] mx-auto" />
-              <h3 className="font-display text-lg font-bold">Verify Your Email</h3>
+              <h3 className="font-display text-lg font-bold">Account Created!</h3>
               <p className="text-sm text-[#999999]">
-                We sent a verification link to your email address. Confirm your email to
-                sign in and enter the active raffle.
+                Your account is ready. Sign in with your phone number and password to
+                enter the active raffle.
               </p>
               <Link href="/login" className="block">
                 <Button className="w-full">Go to Sign In</Button>
@@ -94,6 +96,7 @@ export default function RegisterPage() {
                 <Input
                   id="fullName"
                   placeholder="Kwame Mensah"
+                  autoComplete="name"
                   {...register("fullName")}
                 />
                 {errors.fullName && (
@@ -102,26 +105,22 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <Label htmlFor="email">Email Address</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="kwame@example.com"
-                  {...register("email")}
-                />
-                {errors.email && (
-                  <p className="mt-1 text-xs text-[#FF2020]">{errors.email.message}</p>
-                )}
-              </div>
-
-              <div>
-                <Label htmlFor="phone">Phone Number (MoMo)</Label>
+                <Label htmlFor="phone">
+                  <span className="flex items-center gap-1.5">
+                    <Smartphone className="h-3.5 w-3.5 text-[#EF3038]" />
+                    Phone Number
+                  </span>
+                </Label>
                 <Input
                   id="phone"
                   type="tel"
-                  placeholder="024 123 4567"
+                  placeholder="0241234567"
+                  autoComplete="tel"
                   {...register("phone")}
                 />
+                <p className="mt-1 text-xs text-[#666666]">
+                  This is your login ID — use your MoMo number for easy payments.
+                </p>
                 {errors.phone && (
                   <p className="mt-1 text-xs text-[#FF2020]">{errors.phone.message}</p>
                 )}
@@ -133,6 +132,7 @@ export default function RegisterPage() {
                   id="password"
                   type="password"
                   placeholder="Minimum 8 characters"
+                  autoComplete="new-password"
                   {...register("password")}
                 />
                 {errors.password && (
@@ -146,6 +146,7 @@ export default function RegisterPage() {
                   id="confirmPassword"
                   type="password"
                   placeholder="Repeat password"
+                  autoComplete="new-password"
                   {...register("confirmPassword")}
                 />
                 {errors.confirmPassword && (

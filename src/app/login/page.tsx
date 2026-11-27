@@ -5,9 +5,10 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, Lock } from "lucide-react";
+import { Loader2, Lock, Smartphone } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { loginSchema } from "@/lib/validations";
+import { phoneToEmail } from "@/lib/validations";
 import { Wordmark } from "@/components/brand/wordmark";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
@@ -35,7 +36,7 @@ function LoginForm() {
     setError(null);
     const supabase = createClient();
     const { error: authError } = await supabase.auth.signInWithPassword({
-      email: values.email,
+      email: phoneToEmail(values.phone),
       password: values.password,
     });
 
@@ -73,7 +74,8 @@ function LoginForm() {
           </div>
           <CardTitle className="text-2xl">Sign In</CardTitle>
           <p className="text-sm text-[#999999]">
-            Enter your credentials to access your entries and submit MoMo payments.
+            Enter your phone number and password to access your entries and submit MoMo
+            payments.
           </p>
         </CardHeader>
 
@@ -86,16 +88,21 @@ function LoginForm() {
             )}
 
             <div>
-              <Label htmlFor="email">Email Address</Label>
+              <Label htmlFor="phone">
+                <span className="flex items-center gap-1.5">
+                  <Smartphone className="h-3.5 w-3.5 text-[#EF3038]" />
+                  Phone Number
+                </span>
+              </Label>
               <Input
-                id="email"
-                type="email"
-                autoComplete="email"
-                placeholder="you@example.com"
-                {...register("email")}
+                id="phone"
+                type="tel"
+                autoComplete="tel"
+                placeholder="0241234567"
+                {...register("phone")}
               />
-              {errors.email && (
-                <p className="mt-1 text-xs text-[#FF2020]">{errors.email.message}</p>
+              {errors.phone && (
+                <p className="mt-1 text-xs text-[#FF2020]">{errors.phone.message}</p>
               )}
             </div>
 
