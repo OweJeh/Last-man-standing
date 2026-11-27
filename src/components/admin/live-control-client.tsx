@@ -129,12 +129,18 @@ export function LiveControlClient({
       ref={streamContainerRef}
       className={
         isMaximized
-          ? "h-screen w-screen bg-[#080808] flex flex-col overflow-hidden"
+          ? "h-screen w-screen bg-[#080808] relative overflow-hidden"
           : "flex flex-col gap-4"
       }
     >
-      {/* Top Stream Header Bar with Maximize Button */}
-      <div className={`shrink-0 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-[#111111] px-4 py-2.5${isMaximized ? " mx-4 mt-3" : ""}`}>
+      {/* Top Stream Header Bar — sits above the arena in normal, overlaid at top in fullscreen */}
+      <div
+        className={
+          isMaximized
+            ? "absolute top-0 left-0 right-0 z-30 flex flex-wrap items-center justify-between gap-3 border-b border-white/10 bg-[#080808]/90 backdrop-blur-md px-4 py-2"
+            : "flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-[#111111] px-4 py-2.5"
+        }
+      >
         <div className="flex flex-wrap items-center gap-3 text-xs">
           <Badge variant={round.status === "running" ? "live" : "default"}>
             {round.status === "running" && <Radio className="h-3 w-3 animate-pulse" />}
@@ -189,33 +195,37 @@ export function LiveControlClient({
       </div>
 
       {error && (
-        <div className={`shrink-0 rounded-md border border-[#FF2020]/40 bg-[#FF2020]/10 p-3 text-xs text-[#FF2020]${isMaximized ? " mx-4" : ""}`}>
+        <div className={`rounded-md border border-[#FF2020]/40 bg-[#FF2020]/10 p-3 text-xs text-[#FF2020]${isMaximized ? " absolute top-12 left-4 right-4 z-30" : ""}`}>
           {error}
         </div>
       )}
 
-      {/* Primary Broadcast Arena — fills remaining space in fullscreen, natural height otherwise */}
-      <div className={isMaximized ? "flex-1 min-h-0 overflow-hidden px-4" : ""}>
-        <div className={isMaximized ? "h-full overflow-y-auto" : ""}>
-          <LiveBroadcastClient
-            embedded
-            compact={isMaximized}
-            initialRound={round}
-            initialParticipants={participants}
-            initialStageResults={stageResults}
-            initialWinners={winners}
-            initialEvents={events}
-            replayStage={replayStage}
-            replayKey={replayKey}
-          />
-        </div>
-      </div>
-
-      {/* Control Dock — always visible at the bottom in both modes */}
+      {/* Primary Broadcast Arena — full area in fullscreen (padded for HUD bars), natural in normal */}
       <div
         className={
           isMaximized
-            ? "shrink-0 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/15 bg-[#111111]/95 backdrop-blur-md px-4 py-2 mx-4 mb-3 shadow-2xl"
+            ? "absolute inset-0 pt-[44px] pb-[56px] overflow-y-auto flex flex-col items-center justify-center"
+            : ""
+        }
+      >
+        <LiveBroadcastClient
+          embedded
+          compact={isMaximized}
+          initialRound={round}
+          initialParticipants={participants}
+          initialStageResults={stageResults}
+          initialWinners={winners}
+          initialEvents={events}
+          replayStage={replayStage}
+          replayKey={replayKey}
+        />
+      </div>
+
+      {/* Control Dock — absolute HUD bar pinned to bottom in fullscreen, plain bar in normal */}
+      <div
+        className={
+          isMaximized
+            ? "absolute bottom-0 left-0 right-0 z-30 flex flex-wrap items-center justify-between gap-3 border-t border-white/15 bg-[#080808]/90 backdrop-blur-md px-4 py-2 shadow-2xl"
             : "flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/15 bg-[#111111]/95 backdrop-blur-md px-4 py-2.5 shadow-2xl"
         }
       >

@@ -200,26 +200,30 @@ export function GridRandomiserArena({
   }, [latestStageNumber, reducedMotion]);
 
   const count = stageParticipants.length;
-  let gridColsClass = "grid-cols-5 sm:grid-cols-10";
+  let gridColsClass = "grid-cols-10";
   let tileSizeClass = compact
-    ? "h-8 sm:h-9 lg:h-[42px] text-xs sm:text-sm"
+    ? "h-9 sm:h-10 lg:h-12 text-sm sm:text-base"
     : "h-11 sm:h-12 text-sm sm:text-base";
+  let gridMaxWidthClass = "";
 
   if (count <= 12) {
     gridColsClass = "grid-cols-3 sm:grid-cols-4";
     tileSizeClass = compact
-      ? "h-16 sm:h-20 text-lg sm:text-xl"
+      ? "h-20 sm:h-24 lg:h-28 text-2xl sm:text-3xl"
       : "h-20 sm:h-24 text-xl sm:text-2xl";
+    gridMaxWidthClass = compact ? "max-w-sm mx-auto" : "";
   } else if (count <= 25) {
     gridColsClass = "grid-cols-5";
     tileSizeClass = compact
-      ? "h-12 sm:h-14 text-base sm:text-lg"
+      ? "h-16 sm:h-20 text-xl sm:text-2xl"
       : "h-14 sm:h-18 text-lg sm:text-xl";
+    gridMaxWidthClass = compact ? "max-w-lg mx-auto" : "";
   } else if (count <= 50) {
     gridColsClass = "grid-cols-5 sm:grid-cols-10";
     tileSizeClass = compact
-      ? "h-10 sm:h-12 text-sm sm:text-base"
+      ? "h-11 sm:h-13 text-base sm:text-lg"
       : "h-12 sm:h-14 text-base sm:text-lg";
+    gridMaxWidthClass = "";
   }
 
   const totalToEliminate = latestResult?.elimination_sequence?.length ?? 0;
@@ -239,7 +243,7 @@ export function GridRandomiserArena({
       : null;
 
   return (
-    <div className={compact ? "space-y-2.5" : "space-y-5"}>
+    <div className={compact ? "flex flex-col items-center space-y-2.5 w-full" : "space-y-5"}>
       {/* Active Elimination Spotlight & Progress Bar */}
       {isAnimating && latestResult && (
         <div
@@ -356,7 +360,7 @@ export function GridRandomiserArena({
       <div
         className={cn(
           "relative rounded-2xl border border-white/15 bg-[#080808] shadow-[0_0_60px_rgba(0,0,0,0.9)] overflow-hidden",
-          compact ? "p-2.5 sm:p-3.5" : "p-3 sm:p-6"
+          compact ? "p-2.5 sm:p-3.5 w-full" : "p-3 sm:p-6"
         )}
       >
         {isAnimating && (
@@ -366,7 +370,7 @@ export function GridRandomiserArena({
           />
         )}
 
-        <div className={cn("grid", compact ? "gap-1.5 sm:gap-2" : "gap-2 sm:gap-2.5", gridColsClass)}>
+        <div className={cn("grid", compact ? "gap-2 sm:gap-2.5" : "gap-2 sm:gap-2.5", gridColsClass, gridMaxWidthClass)}>
           {stageParticipants.map((p) => {
             const num = p.assigned_number;
             const isScanning = scanningNumber === num;

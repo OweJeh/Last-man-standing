@@ -266,11 +266,11 @@ export function LiveBroadcastClient({
       ref={containerRef}
       className={
         embedded
-          ? "bg-[#080808] text-white"
+          ? "bg-[#080808] text-white w-full h-full"
           : "min-h-screen bg-[#080808] text-white px-4 py-6 sm:px-6 lg:px-8"
       }
     >
-      <div className={compact ? "space-y-3" : embedded ? "space-y-6" : "mx-auto max-w-6xl space-y-6"}>
+      <div className={compact ? "w-full h-full flex flex-col items-center justify-center space-y-3 px-4 py-2" : embedded ? "space-y-6" : "mx-auto max-w-6xl space-y-6"}>
         {/* Broadcast Header (hidden in compact maximized stream mode) */}
         {!compact && (
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 rounded-xl border border-white/10 bg-[#141414] p-4 sm:p-5">
