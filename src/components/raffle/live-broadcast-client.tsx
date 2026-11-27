@@ -35,6 +35,7 @@ interface LiveBroadcastClientProps {
   initialWinners: Winner[];
   initialEvents: RaffleEvent[];
   embedded?: boolean;
+  compact?: boolean;
   replayStage?: number | null;
   replayKey?: number;
 }
@@ -46,6 +47,7 @@ export function LiveBroadcastClient({
   initialWinners,
   initialEvents,
   embedded = false,
+  compact = false,
   replayStage = null,
   replayKey = 0,
 }: LiveBroadcastClientProps) {
@@ -269,9 +271,10 @@ export function LiveBroadcastClient({
           : "min-h-screen bg-[#080808] text-white px-4 py-6 sm:px-6 lg:px-8"
       }
     >
-      <div className={embedded ? "space-y-6" : "mx-auto max-w-6xl space-y-6"}>
-        {/* Broadcast Header */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 rounded-xl border border-white/10 bg-[#141414] p-4 sm:p-5">
+      <div className={compact ? "space-y-3" : embedded ? "space-y-6" : "mx-auto max-w-6xl space-y-6"}>
+        {/* Broadcast Header (hidden in compact maximized stream mode) */}
+        {!compact && (
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 rounded-xl border border-white/10 bg-[#141414] p-4 sm:p-5">
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant={displayRound.status === "running" ? "live" : "default"}>
@@ -319,15 +322,17 @@ export function LiveBroadcastClient({
                 <Maximize2 className="h-4 w-4" />
               )}
             </Button>
-            <Button variant="primary" size="sm" onClick={handleShare}>
-              <Share2 className="h-4 w-4" />
-              {copiedShare ? "Copied!" : "Share"}
-            </Button>
+              <Button variant="primary" size="sm" onClick={handleShare}>
+                <Share2 className="h-4 w-4" />
+                {copiedShare ? "Copied!" : "Share"}
+              </Button>
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Live Telemetry Bar */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {/* Live Telemetry Bar (hidden in compact maximized stream mode) */}
+        {!compact && (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="rounded-xl border border-white/10 bg-[#141414] p-4">
             <span className="text-[11px] uppercase tracking-wider text-[#999999]">
               Prize Pool
@@ -353,18 +358,19 @@ export function LiveBroadcastClient({
             </p>
           </div>
           <div className="rounded-xl border border-white/10 bg-[#141414] p-4">
-            <span className="text-[11px] uppercase tracking-wider text-[#999999]">
-              Survivors
-            </span>
-            <p className="font-display text-xl font-bold text-[#36B879] tabular-nums mt-0.5">
-              {survivorsCount}
-            </p>
+              <span className="text-[11px] uppercase tracking-wider text-[#999999]">
+                Survivors
+              </span>
+              <p className="font-display text-xl font-bold text-[#36B879] tabular-nums mt-0.5">
+                {survivorsCount}
+              </p>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Main Arena: Phases 1-4 Grid OR Phase 5 Final Six + Winner Reveal */}
         {displayRound.current_stage >= 5 && finalSixParticipants.length > 0 ? (
-          <div className="space-y-8">
+          <div className="space-y-6">
             <FinalSixStage
               key={isReplaying ? `replay-f6-${replayKey}` : "live-f6"}
               finalSixParticipants={finalSixParticipants}
@@ -390,36 +396,39 @@ export function LiveBroadcastClient({
             currentStage={displayRound.current_stage}
             soundEnabled={soundEnabled}
             reducedMotion={reducedMotion}
+            compact={compact}
           />
         )}
 
-        {/* Fairness Commitment & Quick Links */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-xl border border-white/10 bg-[#111111] p-4 text-xs text-[#999999]">
-          <div className="space-y-1">
-            <div className="flex items-center gap-1.5 font-semibold text-white">
-              <ShieldCheck className="h-4 w-4 text-[#36B879]" />
-              Cryptographic Draw Commitment
+        {/* Fairness Commitment & Quick Links (hidden in compact maximized stream mode) */}
+        {!compact && (
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-xl border border-white/10 bg-[#111111] p-4 text-xs text-[#999999]">
+            <div className="space-y-1">
+              <div className="flex items-center gap-1.5 font-semibold text-white">
+                <ShieldCheck className="h-4 w-4 text-[#36B879]" />
+                Cryptographic Draw Commitment
+              </div>
+              <p className="font-mono break-all">
+                {round.seed_commitment
+                  ? `SHA-256 Seed Commitment: ${round.seed_commitment}`
+                  : "Seed commitment will be published when the admin locks and starts the draw."}
+              </p>
             </div>
-            <p className="font-mono break-all">
-              {round.seed_commitment
-                ? `SHA-256 Seed Commitment: ${round.seed_commitment}`
-                : "Seed commitment will be published when the admin locks and starts the draw."}
-            </p>
+            <div className="flex items-center gap-3 shrink-0">
+              <Link href={`/fairness/${round.id}`}>
+                <Button variant="outline" size="sm">
+                  Verify Fairness
+                </Button>
+              </Link>
+              <Link href="/winners">
+                <Button variant="ghost" size="sm">
+                  <Trophy className="h-4 w-4 mr-1" />
+                  Past Winners
+                </Button>
+              </Link>
+            </div>
           </div>
-          <div className="flex items-center gap-3 shrink-0">
-            <Link href={`/fairness/${round.id}`}>
-              <Button variant="outline" size="sm">
-                Verify Fairness
-              </Button>
-            </Link>
-            <Link href="/winners">
-              <Button variant="ghost" size="sm">
-                <Trophy className="h-4 w-4 mr-1" />
-                Past Winners
-              </Button>
-            </Link>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -116,12 +116,20 @@ export function LiveControlClient({
     }
   };
 
+  useEffect(() => {
+    const onFullscreenChange = () => {
+      setIsMaximized(Boolean(document.fullscreenElement));
+    };
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
+  }, []);
+
   return (
     <div
       ref={streamContainerRef}
       className={
         isMaximized
-          ? "min-h-screen bg-[#080808] p-4 sm:p-6 overflow-y-auto space-y-4"
+          ? "h-screen w-screen bg-[#080808] px-4 py-3 flex flex-col justify-between gap-2.5 overflow-hidden"
           : "space-y-4"
       }
     >
@@ -187,19 +195,28 @@ export function LiveControlClient({
       )}
 
       {/* Primary Broadcast Arena (Grid / Final Six / Winner Reveal) */}
-      <LiveBroadcastClient
-        embedded
-        initialRound={round}
-        initialParticipants={participants}
-        initialStageResults={stageResults}
-        initialWinners={winners}
-        initialEvents={events}
-        replayStage={replayStage}
-        replayKey={replayKey}
-      />
+      <div className={isMaximized ? "flex-1 min-h-0 flex flex-col justify-center overflow-y-auto" : ""}>
+        <LiveBroadcastClient
+          embedded
+          compact={isMaximized}
+          initialRound={round}
+          initialParticipants={participants}
+          initialStageResults={stageResults}
+          initialWinners={winners}
+          initialEvents={events}
+          replayStage={replayStage}
+          replayKey={replayKey}
+        />
+      </div>
 
       {/* Compact Control Dock Below Arena (stays accessible even when maximized) */}
-      <div className="sticky bottom-3 z-30 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/15 bg-[#111111]/95 backdrop-blur-md px-4 py-2.5 shadow-2xl">
+      <div
+        className={
+          isMaximized
+            ? "shrink-0 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/15 bg-[#111111]/95 backdrop-blur-md px-4 py-2 shadow-2xl"
+            : "sticky bottom-3 z-30 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/15 bg-[#111111]/95 backdrop-blur-md px-4 py-2.5 shadow-2xl"
+        }
+      >
         <div className="flex items-center gap-2 text-[11px] text-[#999999] min-w-0">
           <ShieldCheck className="h-3.5 w-3.5 text-[#36B879] shrink-0" />
           <span className="font-mono truncate max-w-[220px] sm:max-w-md">

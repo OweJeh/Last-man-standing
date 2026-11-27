@@ -13,6 +13,7 @@ interface GridRandomiserArenaProps {
   currentStage: number;
   soundEnabled: boolean;
   reducedMotion: boolean;
+  compact?: boolean;
   onStageAnimationComplete?: (stageNumber: number) => void;
 }
 
@@ -46,6 +47,7 @@ export function GridRandomiserArena({
   currentStage,
   soundEnabled,
   reducedMotion,
+  compact = false,
   onStageAnimationComplete,
 }: GridRandomiserArenaProps) {
   const activeGridStage = Math.min(Math.max(currentStage, 0), 4);
@@ -199,17 +201,25 @@ export function GridRandomiserArena({
 
   const count = stageParticipants.length;
   let gridColsClass = "grid-cols-5 sm:grid-cols-10";
-  let tileSizeClass = "h-11 sm:h-12 text-sm sm:text-base";
+  let tileSizeClass = compact
+    ? "h-8 sm:h-9 lg:h-[42px] text-xs sm:text-sm"
+    : "h-11 sm:h-12 text-sm sm:text-base";
 
   if (count <= 12) {
     gridColsClass = "grid-cols-3 sm:grid-cols-4";
-    tileSizeClass = "h-20 sm:h-24 text-xl sm:text-2xl";
+    tileSizeClass = compact
+      ? "h-16 sm:h-20 text-lg sm:text-xl"
+      : "h-20 sm:h-24 text-xl sm:text-2xl";
   } else if (count <= 25) {
     gridColsClass = "grid-cols-5";
-    tileSizeClass = "h-14 sm:h-18 text-lg sm:text-xl";
+    tileSizeClass = compact
+      ? "h-12 sm:h-14 text-base sm:text-lg"
+      : "h-14 sm:h-18 text-lg sm:text-xl";
   } else if (count <= 50) {
     gridColsClass = "grid-cols-5 sm:grid-cols-10";
-    tileSizeClass = "h-12 sm:h-14 text-base sm:text-lg";
+    tileSizeClass = compact
+      ? "h-10 sm:h-12 text-sm sm:text-base"
+      : "h-12 sm:h-14 text-base sm:text-lg";
   }
 
   const totalToEliminate = latestResult?.elimination_sequence?.length ?? 0;
@@ -229,10 +239,15 @@ export function GridRandomiserArena({
       : null;
 
   return (
-    <div className="space-y-5">
+    <div className={compact ? "space-y-2.5" : "space-y-5"}>
       {/* Active Elimination Spotlight & Progress Bar */}
       {isAnimating && latestResult && (
-        <div className="rounded-xl border border-[#EF3038]/50 bg-[#141414] p-4 space-y-3 shadow-[0_0_30px_rgba(239,48,56,0.12)]">
+        <div
+          className={cn(
+            "rounded-xl border border-[#EF3038]/50 bg-[#141414] shadow-[0_0_30px_rgba(239,48,56,0.12)]",
+            compact ? "px-3.5 py-2.5 space-y-2" : "p-4 space-y-3"
+          )}
+        >
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
               <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-[#EF3038]/20 text-[#EF3038]">
@@ -338,7 +353,12 @@ export function GridRandomiserArena({
       )}
 
       {/* White-tile Numbered Arena */}
-      <div className="relative rounded-2xl border border-white/15 bg-[#080808] p-3 sm:p-6 shadow-[0_0_60px_rgba(0,0,0,0.9)] overflow-hidden">
+      <div
+        className={cn(
+          "relative rounded-2xl border border-white/15 bg-[#080808] shadow-[0_0_60px_rgba(0,0,0,0.9)] overflow-hidden",
+          compact ? "p-2.5 sm:p-3.5" : "p-3 sm:p-6"
+        )}
+      >
         {isAnimating && (
           <div
             aria-hidden="true"
@@ -346,7 +366,7 @@ export function GridRandomiserArena({
           />
         )}
 
-        <div className={cn("grid gap-2 sm:gap-2.5", gridColsClass)}>
+        <div className={cn("grid", compact ? "gap-1.5 sm:gap-2" : "gap-2 sm:gap-2.5", gridColsClass)}>
           {stageParticipants.map((p) => {
             const num = p.assigned_number;
             const isScanning = scanningNumber === num;
