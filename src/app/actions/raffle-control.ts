@@ -82,7 +82,8 @@ export async function startRaffleDrawAction(roundId: string): Promise<ActionResu
       assignedNumber: e.assigned_number,
     }));
 
-    const plan = generateDrawPlan(snapshot);
+    const totalStages = ((round.num_stages as number | undefined) ?? 5) as 3 | 4 | 5;
+    const plan = generateDrawPlan(snapshot, undefined, totalStages);
     const encryptedSeed = encryptSeed(plan.seedHex, encryptionKey);
 
     // Persist private draw plan via service_role RPC
@@ -181,9 +182,10 @@ export async function publishNextStageAction(roundId: string): Promise<ActionRes
       return { ok: false, error: "Raffle is not currently running" };
     }
 
+    const totalStages = (round.num_stages as number | undefined) ?? 5;
     const nextStage = round.current_stage + 1;
-    if (nextStage < 1 || nextStage > 5) {
-      return { ok: false, error: "All 5 stages have already been published" };
+    if (nextStage < 1 || nextStage > totalStages) {
+      return { ok: false, error: `All ${totalStages} stages have already been published` };
     }
 
     // Load private draw plan via service_role RPC
@@ -252,10 +254,12 @@ export async function publishNextStageAction(roundId: string): Promise<ActionRes
 
     let seq = (lastEvent?.sequence_number ?? 0) + 1;
 
+    const isFinalSix = nextStage === totalStages;
+
     await supabase.from("raffle_events").insert({
       round_id: roundId,
       sequence_number: seq,
-      event_type: nextStage === 5 ? "FINAL_SIX_STARTED" : "STAGE_PUBLISHED",
+      event_type: isFinalSix ? "FINAL_SIX_STARTED" : "STAGE_PUBLISHED",
       payload: {
         stage_number: nextStage,
         stage_name: stagePlan.stageName,
@@ -268,8 +272,8 @@ export async function publishNextStageAction(roundId: string): Promise<ActionRes
     });
     seq += 1;
 
-    // If Stage 5 (Final Six), finalize winners and reveal cryptographic seed
-    if (nextStage === 5) {
+    // If final stage (Final Six), finalize winners and reveal cryptographic seed
+    if (isFinalSix) {
       const winnersPlan = drawPlan.winners_plan as PlannedWinner[];
       const prizeMap: Record<1 | 2 | 3, number> = {
         1: round.first_prize_pesewas,
@@ -303,7 +307,7 @@ export async function publishNextStageAction(roundId: string): Promise<ActionRes
       await supabase
         .from("raffle_rounds")
         .update({
-          current_stage: 5,
+          current_stage: totalStages,
           status: "completed",
           revealed_seed: revealedSeed,
           result_hash: drawPlan.result_hash,

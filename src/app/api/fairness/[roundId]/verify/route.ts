@@ -46,6 +46,7 @@ export async function POST(
     snapshotHash: round.snapshot_hash,
     algorithmVersion: round.algorithm_version,
     expectedResultHash: round.result_hash,
+    numStages: ((round.num_stages as number | undefined) ?? 5) as 3 | 4 | 5,
   });
 
   return NextResponse.json(verification);

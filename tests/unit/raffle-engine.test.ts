@@ -96,5 +96,35 @@ describe("Cryptographic Raffle Engine", () => {
     expect(cipherText).not.toContain(seed);
     expect(decryptSeed(cipherText, key)).toBe(seed);
   });
+
+  it("supports custom capacities (10, 25, 40) and configurable stage counts (3, 4, 5) ending at Final Six", () => {
+    for (const [capacity, numStages] of [
+      [10, 3],
+      [10, 5],
+      [25, 4],
+      [30, 4],
+      [40, 5],
+    ] as const) {
+      const participants = makeParticipants(capacity);
+      const plan = generateDrawPlan(participants, undefined, numStages);
+      expect(plan.stages).toHaveLength(numStages);
+      // Penultimate stage must end with exactly 6 survivors entering Final Six
+      expect(plan.stages[numStages - 2].survivingCount).toBe(6);
+      // Final stage must end with 3 winners
+      expect(plan.stages[numStages - 1].survivingCount).toBe(3);
+      expect(plan.winners).toHaveLength(3);
+
+      const verify = verifyDraw({
+        seedHex: plan.seedHex,
+        seedCommitment: plan.seedCommitment,
+        snapshot: participants,
+        snapshotHash: plan.snapshotHash,
+        algorithmVersion: plan.algorithmVersion,
+        expectedResultHash: plan.resultHash,
+        numStages,
+      });
+      expect(verify.valid).toBe(true);
+    }
+  });
 });
 

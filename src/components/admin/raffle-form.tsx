@@ -9,6 +9,7 @@ import {
   formatGhs,
   ghsToPesewas,
 } from "@/lib/money";
+import { computeStageDefinitions, type StageDefinition } from "@/lib/raffle-engine/engine";
 import { createRaffleAction, updateDraftRaffleAction } from "@/app/actions/admin-raffles";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Textarea } from "@/components/ui/input";
@@ -31,6 +32,9 @@ export function RaffleForm({ existingDraft }: RaffleFormProps) {
   );
   const [participantCapacity, setParticipantCapacity] = useState(
     existingDraft?.participant_capacity ?? 100
+  );
+  const [numStages, setNumStages] = useState<3 | 4 | 5>(
+    ((existingDraft?.num_stages as 3 | 4 | 5) ?? 5)
   );
   const [ownerProfitGhs, setOwnerProfitGhs] = useState(
     existingDraft ? existingDraft.owner_profit_pesewas / 100 : 2000
@@ -70,6 +74,14 @@ export function RaffleForm({ existingDraft }: RaffleFormProps) {
     previewError = err instanceof Error ? err.message : "Invalid financial config";
   }
 
+  let stagePreview: StageDefinition[] | null = null;
+  let stagePreviewError: string | null = null;
+  try {
+    stagePreview = computeStageDefinitions(Number(participantCapacity) || 0, numStages);
+  } catch (err) {
+    stagePreviewError = err instanceof Error ? err.message : "Invalid stage configuration";
+  }
+
   const applyPreset = (presetId: string) => {
     const preset = OPTIONAL_RAFFLE_PRESETS.find((p) => p.id === presetId);
     if (!preset) return;
@@ -77,6 +89,7 @@ export function RaffleForm({ existingDraft }: RaffleFormProps) {
     setEntryFeeGhs(preset.entryFeeGhs);
     setOwnerProfitGhs(preset.ownerProfitGhs);
     setParticipantCapacity(preset.participantCapacity);
+    setNumStages(5);
     setAllocationMethod("auto_50_30_20");
   };
 
@@ -91,6 +104,7 @@ export function RaffleForm({ existingDraft }: RaffleFormProps) {
       description,
       entryFeeGhs,
       participantCapacity,
+      numStages,
       ownerProfitGhs,
       allocationMethod,
       firstPrizeGhs: allocationMethod === "custom" ? firstPrizeGhs : undefined,
@@ -192,12 +206,25 @@ export function RaffleForm({ existingDraft }: RaffleFormProps) {
             <Input
               id="capacity"
               type="number"
-              min="6"
+              min="8"
               max="1000"
               required
               value={participantCapacity}
               onChange={(e) => setParticipantCapacity(Number(e.target.value))}
             />
+          </div>
+          <div>
+            <Label htmlFor="numStages">Elimination Rounds (Stages)</Label>
+            <select
+              id="numStages"
+              value={numStages}
+              onChange={(e) => setNumStages(Number(e.target.value) as 3 | 4 | 5)}
+              className="flex h-11 w-full rounded-md border border-white/15 bg-[#111111] px-3.5 text-sm text-white"
+            >
+              <option value={5}>5 Stages (4 Cuts + Final Six)</option>
+              <option value={4}>4 Stages (3 Cuts + Final Six)</option>
+              <option value={3}>3 Stages (2 Cuts + Final Six)</option>
+            </select>
           </div>
           <div>
             <Label htmlFor="ownerProfitGhs">Owner Profit Target (GHS)</Label>
@@ -211,6 +238,46 @@ export function RaffleForm({ existingDraft }: RaffleFormProps) {
               onChange={(e) => setOwnerProfitGhs(Number(e.target.value))}
             />
           </div>
+        </div>
+
+        {/* Live Stage Breakdown Preview */}
+        <div className="rounded-lg border border-white/10 bg-[#0d0d0d] p-3.5 space-y-2">
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-semibold uppercase tracking-wider text-[#999999]">
+              Elimination Round Plan ({numStages} Stages · Final Six Always Last)
+            </span>
+          </div>
+          {stagePreviewError ? (
+            <p className="text-xs text-[#FF2020]">{stagePreviewError}</p>
+          ) : (
+            stagePreview && (
+              <div className="grid grid-cols-1 sm:grid-cols-5 gap-2">
+                {stagePreview.map((s) => (
+                  <div
+                    key={s.stageNumber}
+                    className="rounded-md border border-white/10 bg-[#141414] px-2.5 py-2 text-xs"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono text-[10px] uppercase text-[#999999]">
+                        Stage {s.stageNumber}
+                      </span>
+                      {s.stageNumber === numStages && (
+                        <span className="text-[10px] font-semibold text-[#D8B66B]">
+                          Final Six
+                        </span>
+                      )}
+                    </div>
+                    <p className="font-display font-bold text-white mt-0.5 tabular-nums">
+                      {s.startingCount} → {s.survivingCount}
+                    </p>
+                    <p className="text-[11px] text-[#EF3038] tabular-nums">
+                      -{s.eliminateCount} out
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )
+          )}
         </div>
 
         <div>
@@ -323,7 +390,7 @@ export function RaffleForm({ existingDraft }: RaffleFormProps) {
         )}
       </Card>
 
-      <Button type="submit" size="lg" disabled={submitting || Boolean(previewError)}>
+      <Button type="submit" size="lg" disabled={submitting || Boolean(previewError) || Boolean(stagePreviewError)}>
         {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
         {existingDraft ? "Save Draft Changes" : "Create Draft Raffle"}
       </Button>

@@ -34,6 +34,7 @@ export interface RaffleRound {
   description: string | null;
   entry_fee_pesewas: number;
   participant_capacity: number;
+  num_stages: number;
   gross_revenue_pesewas: number;
   owner_profit_pesewas: number;
   prize_pool_pesewas: number;

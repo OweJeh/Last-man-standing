@@ -51,3 +51,4 @@ CREATE INDEX IF NOT EXISTS idx_entries_round_status
 -- Speed up raffle_events streaming (realtime + live page)
 CREATE INDEX IF NOT EXISTS idx_raffle_events_round_seq
   ON public.raffle_events (round_id, sequence_number DESC);
+

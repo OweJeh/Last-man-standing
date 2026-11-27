@@ -62,13 +62,16 @@ export function LiveControlClient({
   const [replayStage, setReplayStage] = useState<number | null>(null);
   const [replayKey, setReplayKey] = useState(0);
 
+  const totalStages = round.num_stages || 5;
+  const finalPreStage = totalStages - 1;
+
   const canStart =
     round.status === "full" &&
     round.confirmed_entries_count === round.participant_capacity &&
     !round.seed_commitment;
 
   const canNextStage =
-    round.status === "running" && round.current_stage >= 0 && round.current_stage < 5;
+    round.status === "running" && round.current_stage >= 0 && round.current_stage < totalStages;
 
   const isCompleted = round.status === "completed" || round.status === "archived";
   const isReplaying = replayStage !== null;
@@ -116,7 +119,7 @@ export function LiveControlClient({
     setReplayStage(1);
   };
   const handleNextReplayStage = () => {
-    setReplayStage((s) => (s !== null && s < 5 ? s + 1 : s));
+    setReplayStage((s) => (s !== null && s < totalStages ? s + 1 : s));
   };
   const handleExitReplay = () => setReplayStage(null);
 
@@ -180,7 +183,7 @@ export function LiveControlClient({
           </Badge>
           <span className="font-mono text-[#999999]">{round.round_code}</span>
           <span className="text-[#999999] hidden sm:inline">·</span>
-          <span className="text-white font-semibold tabular-nums">Stage {round.current_stage}/5</span>
+          <span className="text-white font-semibold tabular-nums">Stage {round.current_stage}/{totalStages}</span>
           <span className="text-[#999999]">·</span>
           <span className="text-[#36B879] font-semibold tabular-nums">{survivorsCount} Alive</span>
           <span className="text-[#999999]">·</span>
@@ -259,7 +262,7 @@ export function LiveControlClient({
           <ShieldCheck className="h-3.5 w-3.5 text-[#36B879] shrink-0" />
           <span className="font-mono truncate max-w-[180px] sm:max-w-xs">
             {isReplaying
-              ? `Replay · Stage ${replayStage} / 5`
+              ? `Replay · Stage ${replayStage} / ${totalStages}`
               : round.seed_commitment
               ? `Commit: ${round.seed_commitment}`
               : `Ready (${round.confirmed_entries_count}/${round.participant_capacity})`}
@@ -286,13 +289,13 @@ export function LiveControlClient({
                 variant="gold"
                 size="sm"
                 className="h-8 px-3 text-xs"
-                disabled={replayStage >= 5}
+                disabled={replayStage >= totalStages}
                 onClick={handleNextReplayStage}
               >
                 <SkipForward className="h-3.5 w-3.5" />
-                {replayStage === 4
+                {replayStage === finalPreStage
                   ? "Replay Final Six"
-                  : replayStage >= 5
+                  : replayStage >= totalStages
                   ? "Complete"
                   : `Next (Stage ${replayStage + 1})`}
               </Button>
@@ -323,7 +326,7 @@ export function LiveControlClient({
                 onClick={handleNextStage}
               >
                 {busy && canNextStage ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <SkipForward className="h-3.5 w-3.5" />}
-                {round.current_stage === 4 ? "Reveal Final Six" : "Next Round"}
+                {round.current_stage === finalPreStage ? "Reveal Final Six" : "Next Round"}
               </Button>
 
               {isCompleted && (
@@ -396,8 +399,8 @@ export function LiveControlClient({
                     <div key={stage.id ?? stage.stage_number} className="rounded-xl border border-white/10 bg-[#0b0b0b] p-4 space-y-3">
                       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-2">
                         <div className="flex items-center gap-2">
-                          <Badge variant={stage.stage_number === 5 ? "gold" : "default"}>
-                            Stage {stage.stage_number}{stage.stage_number === 5 ? " · Final Six" : ""}
+                          <Badge variant={stage.stage_number === totalStages ? "gold" : "default"}>
+                            Stage {stage.stage_number}{stage.stage_number === totalStages ? " · Final Six" : ""}
                           </Badge>
                           <span className="text-xs text-[#EF3038] font-semibold tabular-nums">
                             {ordered.length} Eliminated

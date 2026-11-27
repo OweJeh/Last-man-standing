@@ -11,18 +11,12 @@ interface GridRandomiserArenaProps {
   participants: PublicParticipant[];
   stageResults: StageResult[];
   currentStage: number;
+  totalStages?: number;
   soundEnabled: boolean;
   reducedMotion: boolean;
   compact?: boolean;
   onStageAnimationComplete?: (stageNumber: number) => void;
 }
-
-const STAGE_ANNOUNCEMENTS: Record<number, string> = {
-  1: "50 SURVIVORS REMAIN",
-  2: "25 SURVIVORS REMAIN",
-  3: "12 SURVIVORS REMAIN",
-  4: "6 SURVIVORS REMAIN",
-};
 
 interface StageAnimConfig {
   durationMs: number;
@@ -47,12 +41,13 @@ export function GridRandomiserArena({
   participants,
   stageResults,
   currentStage,
+  totalStages = 5,
   soundEnabled,
   reducedMotion,
   compact = false,
   onStageAnimationComplete,
 }: GridRandomiserArenaProps) {
-  const activeGridStage = Math.min(Math.max(currentStage, 0), 4);
+  const activeGridStage = Math.min(Math.max(currentStage, 0), totalStages - 1);
   const latestResult = stageResults.find((s) => s.stage_number === activeGridStage) ?? null;
   const latestStageNumber = latestResult?.stage_number ?? 0;
 
@@ -148,7 +143,10 @@ export function GridRandomiserArena({
 
     const elimSet = new Set<number>();
     const allNums = stageNumsRef.current.length > 0 ? stageNumsRef.current : seq;
-    const cfg = STAGE_CONFIG[latestStageNumber] ?? STAGE_CONFIG[2];
+    // If totalStages < 5, map the last pre-final stage to Round 4's dramatic config
+    const configKey =
+      latestStageNumber === totalStages - 1 && totalStages < 5 ? 4 : latestStageNumber;
+    const cfg = STAGE_CONFIG[configKey] ?? STAGE_CONFIG[2];
 
     const totalScareMs = cfg.scares * cfg.scareHoldMs;
     const elimWindowMs = Math.max(2_000, cfg.durationMs - cfg.huntMs - totalScareMs);
@@ -257,7 +255,7 @@ export function GridRandomiserArena({
       for (const id of timeouts) clearTimeout(id);
       timeouts.clear();
     };
-  }, [latestStageNumber, reducedMotion]);
+  }, [latestStageNumber, reducedMotion, totalStages]);
 
   const count = stageParticipants.length;
 
@@ -303,8 +301,7 @@ export function GridRandomiserArena({
 
   const announcement =
     latestResult && !isAnimating
-      ? STAGE_ANNOUNCEMENTS[latestResult.stage_number] ||
-        `${latestResult.surviving_numbers.length} SURVIVORS REMAIN`
+      ? `${latestResult.surviving_numbers.length} SURVIVORS REMAIN`
       : null;
 
   return (

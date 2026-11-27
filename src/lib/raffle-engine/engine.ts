@@ -73,8 +73,23 @@ export function computeSnapshotHash(canonicalSnapshot: SnapshotParticipant[]): s
   return sha256Hex(JSON.stringify(minimal));
 }
 
-export function computeStageDefinitions(capacity: number): StageDefinition[] {
-  if (capacity === 100) {
+/**
+ * Compute stage definitions for a draw.
+ *
+ * @param capacity   Total number of participants.
+ * @param numStages  How many stages the admin wants (3, 4, or 5).
+ *                   The LAST stage is always "The Final Six" (6 → 3 winners).
+ *                   Intermediate stages divide the remaining eliminations evenly.
+ *
+ * Examples (capacity=100, numStages=5): 100→50→25→12→6→3
+ * Examples (capacity=40,  numStages=4): 40→20→6→[Final Six]→3  (3 pre-final stages + final)
+ * Examples (capacity=10,  numStages=3): 10→6→[Final Six]→3     (2 pre-final stages + final)
+ */
+export function computeStageDefinitions(
+  capacity: number,
+  numStages: 3 | 4 | 5 = 5
+): StageDefinition[] {
+  if (capacity === 100 && numStages === 5) {
     return [
       {
         stageNumber: 1,
@@ -122,31 +137,65 @@ export function computeStageDefinitions(capacity: number): StageDefinition[] {
   if (capacity < 6) {
     throw new Error("Participant capacity must be at least 6");
   }
+  if (numStages < 3 || numStages > 5) {
+    throw new Error("numStages must be 3, 4, or 5");
+  }
+  // Cannot have more stages than there are participants above 6
+  // (need at least 1 elimination per pre-final stage)
+  const preFinalStages = numStages - 1; // stages before Final Six
+  if (capacity - 6 < preFinalStages) {
+    throw new Error(
+      `Capacity ${capacity} is too small for ${numStages} stages — need at least ${6 + preFinalStages} participants`
+    );
+  }
 
-  // Dynamic 5-stage reduction down to 3 winners for custom capacities
-  const s4Surv = 6;
-  const s5Surv = 3;
-  const s3Surv = Math.max(s4Surv + 1, Math.min(capacity - 2, Math.round(capacity * 0.12)));
-  const s2Surv = Math.max(s3Surv + 1, Math.min(capacity - 1, Math.round(capacity * 0.25)));
-  const s1Surv = Math.max(s2Surv + 1, Math.min(capacity - 1, Math.round(capacity * 0.5)));
+  // The final stage is always Final Six: 6 → 3
+  // Build intermediate survivor counts working backwards from 6
+  // We want roughly geometric spacing: each intermediate stage eliminates
+  // a proportional slice of the current pool.
+  const finalSurv = 3;
+  const preFinalEntry = 6; // participants entering Final Six
 
-  const counts = [capacity, s1Surv, s2Surv, s3Surv, s4Surv, s5Surv];
-  const names = [
+  // Build survivor counts for pre-final stages (numStages-1 of them)
+  // Start from capacity, end at preFinalEntry, with numStages-1 steps
+  const survivorCounts: number[] = [];
+  for (let i = 1; i <= preFinalStages; i++) {
+    // Geometric interpolation: capacity × (preFinalEntry/capacity)^(i/preFinalStages)
+    const ratio = i / preFinalStages;
+    const raw = Math.round(capacity * Math.pow(preFinalEntry / capacity, ratio));
+    // Clamp: must be strictly decreasing and ≥ preFinalEntry
+    const prev = survivorCounts[i - 2] ?? capacity;
+    survivorCounts.push(Math.max(preFinalEntry, Math.min(prev - 1, raw)));
+  }
+  // Last pre-final survivor count must be exactly preFinalEntry (6)
+  survivorCounts[preFinalStages - 1] = preFinalEntry;
+
+  // Full counts array: [capacity, ...intermediate survivors, preFinalEntry, finalSurv]
+  const counts = [capacity, ...survivorCounts, finalSurv];
+
+  // Stage name banks
+  const stageNameBank = [
     "Phase 1 — The Opening Cut",
     "Phase 2 — Halfway Purge",
     "Phase 3 — Quarterfinal",
     "Phase 4 — Semifinal",
-    "Phase 5 — The Final Six",
+  ];
+  const finalStageName = `Phase ${numStages} — The Final Six`;
+
+  const stageNames = [
+    ...stageNameBank.slice(0, preFinalStages),
+    finalStageName,
   ];
 
-  return ([1, 2, 3, 4, 5] as const).map((num, idx) => {
+  return Array.from({ length: numStages }, (_, idx) => {
+    const stageNumber = (idx + 1) as 1 | 2 | 3 | 4 | 5;
     const startingCount = counts[idx];
     const survivingCount = counts[idx + 1];
+    const isFinal = stageNumber === numStages;
     return {
-      stageNumber: num,
-      stageName: names[idx],
-      announcement:
-        num === 5 ? "THE FINAL SIX" : `${survivingCount} SURVIVORS REMAIN`,
+      stageNumber,
+      stageName: stageNames[idx],
+      announcement: isFinal ? "THE FINAL SIX" : `${survivingCount} SURVIVORS REMAIN`,
       startingCount,
       eliminateCount: startingCount - survivingCount,
       survivingCount,
@@ -156,7 +205,8 @@ export function computeStageDefinitions(capacity: number): StageDefinition[] {
 
 export function generateDrawPlan(
   participants: SnapshotParticipant[],
-  providedSeedHex?: string
+  providedSeedHex?: string,
+  numStages: 3 | 4 | 5 = 5
 ): DrawPlan {
   if (participants.length < 6) {
     throw new Error("At least 6 participants are required for a draw");
@@ -183,7 +233,7 @@ export function generateDrawPlan(
 
   // Full deterministic shuffle: index 0 is eliminated first, last index is 1st place winner
   const shuffledOrder = deterministicFisherYates(canonicalSnapshot, seedHex);
-  const stageDefs = computeStageDefinitions(canonicalSnapshot.length);
+  const stageDefs = computeStageDefinitions(canonicalSnapshot.length, numStages);
 
   let cursor = 0;
   const stages: PlannedStage[] = stageDefs.map((def) => {
@@ -269,6 +319,7 @@ export interface VerificationInput {
   snapshotHash: string;
   algorithmVersion: string;
   expectedResultHash: string;
+  numStages?: 3 | 4 | 5;
 }
 
 export interface VerificationResult {
@@ -286,7 +337,7 @@ export interface VerificationResult {
 
 export function verifyDraw(input: VerificationInput): VerificationResult {
   const algorithmMatches = input.algorithmVersion === ALGORITHM_VERSION;
-  const plan = generateDrawPlan(input.snapshot, input.seedHex);
+  const plan = generateDrawPlan(input.snapshot, input.seedHex, input.numStages ?? 5);
 
   const commitmentMatches = plan.seedCommitment === input.seedCommitment;
   const snapshotMatches = plan.snapshotHash === input.snapshotHash;

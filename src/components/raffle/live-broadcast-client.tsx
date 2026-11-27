@@ -229,11 +229,14 @@ export function LiveBroadcastClient({
     }
   }, [isReplaying, replayKey, initialRound.status, initialWinners.length]);
 
+  const totalStages = round.num_stages || 5;
+  const preFinalStageNum = totalStages - 1;
+
   const displayRound: RaffleRound = isReplaying
     ? {
         ...round,
         current_stage: replayStage,
-        status: replayStage >= 5 ? "completed" : "running",
+        status: replayStage >= totalStages ? "completed" : "running",
       }
     : round;
 
@@ -242,19 +245,19 @@ export function LiveBroadcastClient({
     : stageResults;
 
   const displayWinners = isReplaying
-    ? replayStage >= 5
+    ? replayStage >= totalStages
       ? winners
       : []
     : winners;
 
-  const stage4Result = displayStageResults.find((s) => s.stage_number === 4);
-  const stage5Result = displayStageResults.find((s) => s.stage_number === 5) ?? null;
+  const preFinalResult = displayStageResults.find((s) => s.stage_number === preFinalStageNum);
+  const finalStageResult = displayStageResults.find((s) => s.stage_number === totalStages) ?? null;
 
   const finalSixParticipants = React.useMemo(() => {
-    if (!stage4Result) return [];
-    const survSet = new Set(stage4Result.surviving_numbers);
+    if (!preFinalResult) return [];
+    const survSet = new Set(preFinalResult.surviving_numbers);
     return participants.filter((p) => survSet.has(p.assigned_number));
-  }, [participants, stage4Result]);
+  }, [participants, preFinalResult]);
 
   const latestStage = displayStageResults[displayStageResults.length - 1];
   const survivorsCount = latestStage
@@ -353,7 +356,7 @@ export function LiveBroadcastClient({
               Current Stage
             </span>
             <p className="font-display text-xl font-bold text-white tabular-nums mt-0.5">
-              {displayRound.current_stage === 0 ? "Pre-Draw" : `Phase ${displayRound.current_stage} / 5`}
+              {displayRound.current_stage === 0 ? "Pre-Draw" : `Phase ${displayRound.current_stage} / ${totalStages}`}
             </p>
           </div>
           <div className="rounded-xl border border-white/10 bg-[#141414] p-4">
@@ -367,12 +370,12 @@ export function LiveBroadcastClient({
           </div>
         )}
 
-        {/* Main Arena: Phases 1-4 Grid OR Phase 5 Final Six -> Smooth Podium Transition */}
-        {displayRound.current_stage >= 5 && finalSixParticipants.length > 0 ? (
+        {/* Main Arena: Pre-Final Grid OR Final Six -> Smooth Podium Transition */}
+        {displayRound.current_stage >= totalStages && finalSixParticipants.length > 0 ? (
           <FinalSixStage
             key={isReplaying ? `replay-f6-${replayKey}` : "live-f6"}
             finalSixParticipants={finalSixParticipants}
-            stage5Result={stage5Result}
+            stage5Result={finalStageResult}
             winners={displayWinners}
             soundEnabled={soundEnabled}
             reducedMotion={reducedMotion}
@@ -386,6 +389,7 @@ export function LiveBroadcastClient({
             participants={participants}
             stageResults={displayStageResults}
             currentStage={displayRound.current_stage}
+            totalStages={totalStages}
             soundEnabled={soundEnabled}
             reducedMotion={reducedMotion}
             compact={compact}

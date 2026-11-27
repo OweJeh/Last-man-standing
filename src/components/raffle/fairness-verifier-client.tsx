@@ -44,8 +44,8 @@ export function FairnessVerifierClient({
   if (!isCompleted) {
     return (
       <div className="rounded-xl border border-white/10 bg-[#141414] p-5 text-sm text-[#999999]">
-        Seed revelation and deterministic reproduction become available once Stage 5
-        completes.
+        Seed revelation and deterministic reproduction become available once the Final
+        Six stage completes.
       </div>
     );
   }

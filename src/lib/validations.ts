@@ -45,27 +45,33 @@ export const loginSchema = z.object({
   password: z.string().min(1, "Password is required"),
 });
 
-export const createRaffleSchema = z.object({
-  name: z.string().trim().min(3, "Raffle name is required").max(100),
-  roundCode: z
-    .string()
-    .trim()
-    .min(3)
-    .max(30)
-    .regex(/^[A-Z0-9-]+$/, "Use uppercase letters, numbers, and hyphens only"),
-  description: z.string().trim().max(500).optional(),
-  entryFeeGhs: z.coerce.number().positive("Entry price must be greater than 0"),
-  participantCapacity: z.coerce.number().int().min(6).max(1000).default(100),
-  ownerProfitGhs: z.coerce.number().min(0, "Owner profit cannot be negative"),
-  allocationMethod: z.enum(["auto_50_30_20", "custom"]).default("auto_50_30_20"),
-  firstPrizeGhs: z.coerce.number().min(0).optional(),
-  secondPrizeGhs: z.coerce.number().min(0).optional(),
-  thirdPrizeGhs: z.coerce.number().min(0).optional(),
-  momoInstructions: z.string().trim().max(1000).optional(),
-  coverImageUrl: z.string().trim().url().optional().or(z.literal("")),
-  opensAt: z.string().optional(),
-  closesAt: z.string().optional(),
-});
+export const createRaffleSchema = z
+  .object({
+    name: z.string().trim().min(3, "Raffle name is required").max(100),
+    roundCode: z
+      .string()
+      .trim()
+      .min(3)
+      .max(30)
+      .regex(/^[A-Z0-9-]+$/, "Use uppercase letters, numbers, and hyphens only"),
+    description: z.string().trim().max(500).optional(),
+    entryFeeGhs: z.coerce.number().positive("Entry price must be greater than 0"),
+    participantCapacity: z.coerce.number().int().min(8).max(1000).default(100),
+    numStages: z.coerce.number().int().min(3).max(5).default(5),
+    ownerProfitGhs: z.coerce.number().min(0, "Owner profit cannot be negative"),
+    allocationMethod: z.enum(["auto_50_30_20", "custom"]).default("auto_50_30_20"),
+    firstPrizeGhs: z.coerce.number().min(0).optional(),
+    secondPrizeGhs: z.coerce.number().min(0).optional(),
+    thirdPrizeGhs: z.coerce.number().min(0).optional(),
+    momoInstructions: z.string().trim().max(1000).optional(),
+    coverImageUrl: z.string().trim().url().optional().or(z.literal("")),
+    opensAt: z.string().optional(),
+    closesAt: z.string().optional(),
+  })
+  .refine((data) => data.participantCapacity >= 5 + data.numStages, {
+    message: "Participant capacity must be at least 5 + number of stages (e.g. 10 for 5 stages, 8 for 3 stages)",
+    path: ["participantCapacity"],
+  });
 
 export const paymentSubmissionSchema = z.object({
   roundId: z.string().uuid("Invalid raffle round"),

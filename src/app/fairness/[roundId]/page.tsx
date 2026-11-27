@@ -75,7 +75,7 @@ export default async function FairnessPage({
             <code className="font-mono break-all text-[#D8B66B]">
               {isCompleted && round.revealed_seed
                 ? round.revealed_seed
-                : "Hidden until Stage 5 completes"}
+                : "Hidden until draw completes"}
             </code>
           </div>
           <div>
