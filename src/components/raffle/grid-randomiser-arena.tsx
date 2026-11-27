@@ -287,7 +287,7 @@ export function GridRandomiserArena({
             />
           </div>
 
-          {recentEliminated.length > 0 && (
+          {recentEliminated.length > 0 && !compact && (
             <div className="flex flex-wrap items-center gap-1.5 pt-1">
               <span className="text-[10px] uppercase tracking-wider text-[#999999] mr-1">
                 Just Out:
@@ -412,8 +412,8 @@ export function GridRandomiserArena({
         </div>
       </div>
 
-      {/* Eliminated numbers readout after stage completes */}
-      {latestResult && !isAnimating && (
+      {/* Eliminated numbers readout after stage completes — hidden in compact fullscreen mode */}
+      {latestResult && !isAnimating && !compact && (
         <div className="rounded-xl border border-white/10 bg-[#141414] p-4 space-y-2">
           <div className="flex items-center justify-between text-xs uppercase tracking-wider text-[#999999]">
             <span>Stage {latestResult.stage_number} Eliminated Numbers</span>

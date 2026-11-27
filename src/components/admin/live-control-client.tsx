@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -14,6 +14,7 @@ import {
   Radio,
   RotateCcw,
   X,
+  ListX,
 } from "lucide-react";
 import {
   publishNextStageAction,
@@ -53,8 +54,30 @@ export function LiveControlClient({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isMaximized, setIsMaximized] = useState(false);
+  const [showEliminations, setShowEliminations] = useState(false);
   const [replayStage, setReplayStage] = useState<number | null>(null);
   const [replayKey, setReplayKey] = useState(0);
+
+  const participantByNumber = useMemo(() => {
+    const map = new Map<number, PublicParticipant>();
+    for (const p of participants) {
+      map.set(p.assigned_number, p);
+    }
+    return map;
+  }, [participants]);
+
+  const visibleStageResults = useMemo(() => {
+    const base =
+      replayStage !== null
+        ? stageResults.filter((s) => s.stage_number <= replayStage)
+        : stageResults;
+    return [...base].sort((a, b) => a.stage_number - b.stage_number);
+  }, [stageResults, replayStage]);
+
+  const totalEliminatedInView = useMemo(
+    () => visibleStageResults.reduce((acc, s) => acc + s.eliminated_numbers.length, 0),
+    [visibleStageResults]
+  );
 
   const canStart =
     round.status === "full" &&
@@ -241,6 +264,18 @@ export function LiveControlClient({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="h-8 px-3 text-xs border-white/15"
+            onClick={() => setShowEliminations((v) => !v)}
+            title="View round-by-round eliminations"
+          >
+            <ListX className="h-3.5 w-3.5 text-[#EF3038]" />
+            Eliminations ({totalEliminatedInView})
+          </Button>
+
           {isReplaying ? (
             <>
               <Button
@@ -333,6 +368,119 @@ export function LiveControlClient({
           )}
         </div>
       </div>
+
+      {/* Scrollable Eliminations Window (works inside fullscreen & normal view) */}
+      {showEliminations && (
+        <div
+          className={
+            isMaximized
+              ? "absolute inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4"
+              : "fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4"
+          }
+          onClick={() => setShowEliminations(false)}
+        >
+          <div
+            className="w-full max-w-3xl max-h-[82vh] flex flex-col rounded-2xl border border-white/15 bg-[#111111] shadow-2xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="shrink-0 flex items-center justify-between gap-3 border-b border-white/10 px-5 py-3.5 bg-[#141414]">
+              <div className="flex items-center gap-2.5">
+                <ListX className="h-4 w-4 text-[#EF3038]" />
+                <div>
+                  <h3 className="font-display text-sm sm:text-base font-bold text-white uppercase tracking-wider">
+                    Round-by-Round Eliminations
+                  </h3>
+                  <p className="text-[11px] text-[#999999]">
+                    {visibleStageResults.length} stage{visibleStageResults.length === 1 ? "" : "s"} ·{" "}
+                    {totalEliminatedInView} eliminated
+                  </p>
+                </div>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
+                onClick={() => setShowEliminations(false)}
+                aria-label="Close eliminations window"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="flex-1 min-h-0 overflow-y-auto p-5 space-y-4">
+              {visibleStageResults.length === 0 ? (
+                <div className="rounded-xl border border-white/10 bg-[#0c0c0c] p-8 text-center text-xs text-[#999999]">
+                  No eliminations recorded yet. Start the raffle to begin Stage 1.
+                </div>
+              ) : (
+                visibleStageResults.map((stage) => {
+                  const ordered =
+                    stage.elimination_sequence && stage.elimination_sequence.length > 0
+                      ? stage.elimination_sequence
+                      : stage.eliminated_numbers;
+
+                  return (
+                    <div
+                      key={stage.id ?? stage.stage_number}
+                      className="rounded-xl border border-white/10 bg-[#0b0b0b] p-4 space-y-3"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-2">
+                        <div className="flex items-center gap-2">
+                          <Badge variant={stage.stage_number === 5 ? "gold" : "default"}>
+                            Stage {stage.stage_number}
+                            {stage.stage_number === 5 ? " · Final Six" : ""}
+                          </Badge>
+                          <span className="text-xs text-[#EF3038] font-semibold tabular-nums">
+                            {ordered.length} Eliminated
+                          </span>
+                        </div>
+                        <span className="text-xs text-[#36B879] font-semibold tabular-nums">
+                          {stage.surviving_numbers.length} Surviving
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                        {ordered.map((num, idx) => {
+                          const p = participantByNumber.get(num);
+                          return (
+                            <div
+                              key={`${stage.stage_number}-${num}`}
+                              className="flex items-center gap-2 rounded-lg border border-white/10 bg-[#161616] px-2.5 py-1.5 text-xs"
+                            >
+                              <span className="font-mono text-[10px] text-[#777777] tabular-nums w-5 shrink-0">
+                                {idx + 1}.
+                              </span>
+                              <span className="inline-flex h-6 min-w-7 items-center justify-center rounded bg-[#262626] px-1.5 font-display text-xs font-bold text-[#EF3038] tabular-nums shrink-0">
+                                #{num}
+                              </span>
+                              <span className="truncate text-[#cccccc]">
+                                {p?.display_name ?? `Entry #${num}`}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            <div className="shrink-0 flex items-center justify-end gap-2 border-t border-white/10 bg-[#141414] px-5 py-3">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                className="h-8 px-4 text-xs"
+                onClick={() => setShowEliminations(false)}
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
