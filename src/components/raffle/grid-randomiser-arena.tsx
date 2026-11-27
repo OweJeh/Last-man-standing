@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Crosshair, Radio } from "lucide-react";
-import { cn, formatDateTime } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { playEliminationPulse, playScannerTick } from "@/lib/sound";
 import type { PublicParticipant, StageResult } from "@/types/database";
 
@@ -77,6 +77,7 @@ export function GridRandomiserArena({
   const [scanningNumber, setScanningNumber] = useState<number | null>(null);
   const [trailNumbers, setTrailNumbers] = useState<number[]>([]);
   const [eliminatedInAnim, setEliminatedInAnim] = useState<Set<number>>(new Set());
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [recentEliminated, setRecentEliminated] = useState<number[]>([]);
   const [isAnimating, setIsAnimating] = useState(false);
   const [isHunting, setIsHunting] = useState(false);
@@ -200,30 +201,35 @@ export function GridRandomiserArena({
   }, [latestStageNumber, reducedMotion]);
 
   const count = stageParticipants.length;
-  let gridColsClass = compact ? "grid-cols-10 grid-rows-10 h-full" : "grid-cols-10";
-  let tileSizeClass = compact
-    ? "h-full min-h-0 text-xs sm:text-sm lg:text-base"
-    : "h-11 sm:h-12 text-sm sm:text-base";
-  let gridMaxWidthClass = compact ? "w-full" : "";
+
+  // In compact (fullscreen) mode: grid fills the measured arena height via h-full chain.
+  // Grid rows + cols are explicit so tiles auto-fit.
+  let gridColsClass: string;
+  let gridRowsClass: string;
+  let tileFontClass: string;
+  let gridMaxWidthClass: string;
 
   if (count <= 12) {
-    gridColsClass = compact ? "grid-cols-4 grid-rows-3 h-full" : "grid-cols-3 sm:grid-cols-4";
-    tileSizeClass = compact
-      ? "h-full min-h-0 text-2xl sm:text-3xl"
-      : "h-20 sm:h-24 text-xl sm:text-2xl";
-    gridMaxWidthClass = compact ? "max-w-2xl w-full mx-auto" : "";
+    gridColsClass = "grid-cols-4";
+    gridRowsClass = compact ? "grid-rows-3 h-full" : "";
+    tileFontClass = compact ? "h-full text-2xl" : "h-20 sm:h-24 text-xl sm:text-2xl";
+    gridMaxWidthClass = compact ? "max-w-xl mx-auto" : "";
   } else if (count <= 25) {
-    gridColsClass = compact ? "grid-cols-5 grid-rows-5 h-full" : "grid-cols-5";
-    tileSizeClass = compact
-      ? "h-full min-h-0 text-xl sm:text-2xl"
-      : "h-14 sm:h-18 text-lg sm:text-xl";
-    gridMaxWidthClass = compact ? "max-w-3xl w-full mx-auto" : "";
+    gridColsClass = "grid-cols-5";
+    gridRowsClass = compact ? "grid-rows-5 h-full" : "";
+    tileFontClass = compact ? "h-full text-lg sm:text-xl" : "h-14 sm:h-18 text-lg sm:text-xl";
+    gridMaxWidthClass = compact ? "max-w-2xl mx-auto" : "";
   } else if (count <= 50) {
-    gridColsClass = compact ? "grid-cols-10 grid-rows-5 h-full" : "grid-cols-5 sm:grid-cols-10";
-    tileSizeClass = compact
-      ? "h-full min-h-0 text-base sm:text-lg"
-      : "h-12 sm:h-14 text-base sm:text-lg";
-    gridMaxWidthClass = compact ? "w-full" : "";
+    gridColsClass = "grid-cols-10";
+    gridRowsClass = compact ? "grid-rows-5 h-full" : "";
+    tileFontClass = compact ? "h-full text-sm sm:text-base" : "h-12 sm:h-14 text-base sm:text-lg";
+    gridMaxWidthClass = "";
+  } else {
+    // 100 tiles
+    gridColsClass = "grid-cols-10";
+    gridRowsClass = compact ? "grid-rows-10 h-full" : "";
+    tileFontClass = compact ? "h-full text-xs sm:text-sm" : "h-11 sm:h-12 text-sm sm:text-base";
+    gridMaxWidthClass = "";
   }
 
   const totalToEliminate = latestResult?.elimination_sequence?.length ?? 0;
@@ -243,95 +249,65 @@ export function GridRandomiserArena({
       : null;
 
   return (
-    <div className={compact ? "flex flex-col items-center gap-2 w-full h-full min-h-0 overflow-hidden" : "space-y-5"}>
+    <div className={compact ? "h-full flex flex-col min-h-0 gap-1.5" : "space-y-5"}>
       {/* Active Elimination Spotlight & Progress Bar */}
       {isAnimating && latestResult && (
         <div
           className={cn(
-            "shrink-0 w-full rounded-xl border border-[#EF3038]/50 bg-[#141414] shadow-[0_0_30px_rgba(239,48,56,0.12)]",
-            compact ? "px-3.5 py-2 space-y-1.5" : "p-4 space-y-3"
+            "shrink-0 rounded-xl border border-[#EF3038]/50 bg-[#141414] shadow-[0_0_30px_rgba(239,48,56,0.12)]",
+            compact ? "px-3 py-2" : "p-4 space-y-3"
           )}
         >
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5">
-              <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-[#EF3038]/20 text-[#EF3038]">
-                <Crosshair className="h-4 w-4 animate-spin" />
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-[#EF3038]/20 text-[#EF3038]">
+                <Crosshair className="h-3.5 w-3.5 animate-spin" />
               </span>
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#EF3038] flex items-center gap-1.5">
-                  <Radio className="h-3 w-3 animate-pulse" />
-                  {isHunting
-                    ? `Stage ${latestResult.stage_number} Randomizer Scanning...`
-                    : `Stage ${latestResult.stage_number} Elimination Live`}
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-[#EF3038] flex items-center gap-1">
+                  <Radio className="h-2.5 w-2.5 animate-pulse" />
+                  {isHunting ? `Stage ${latestResult.stage_number} Scanning` : `Stage ${latestResult.stage_number} Live`}
                 </p>
-                <p className="font-display text-base sm:text-lg font-bold text-white">
+                <p className="text-xs font-bold text-white">
                   {scanningParticipant
-                    ? `${isHunting ? "Scanning" : "Targeting"} #${scanningParticipant.assigned_number} — ${scanningParticipant.display_name}`
-                    : "Scanning Grid..."}
+                    ? `${isHunting ? "Scanning" : "Targeting"} #${scanningParticipant.assigned_number}${compact ? "" : ` — ${scanningParticipant.display_name}`}`
+                    : "Scanning..."}
                 </p>
               </div>
             </div>
-
-            <div className="text-right">
-              <span className="font-mono text-xs text-[#999999] block">Eliminated</span>
-              <span className="font-display text-lg font-bold tabular-nums text-white">
-                {eliminatedSoFar} / {totalToEliminate}
-              </span>
-            </div>
+            <span className="font-mono text-xs text-white tabular-nums">
+              {eliminatedInAnim.size}/{totalToEliminate} out
+            </span>
           </div>
-
-          <div className="h-2 w-full rounded-full bg-white/10 overflow-hidden">
+          <div className="h-1.5 w-full rounded-full bg-white/10 overflow-hidden mt-1.5">
             <div
               className="h-full bg-[#EF3038] transition-all duration-300 ease-out"
               style={{ width: `${progressPct}%` }}
             />
           </div>
-
-          {recentEliminated.length > 0 && !compact && (
-            <div className="flex flex-wrap items-center gap-1.5 pt-1">
-              <span className="text-[10px] uppercase tracking-wider text-[#999999] mr-1">
-                Just Out:
-              </span>
-              {recentEliminated.map((n) => (
-                <span
-                  key={n}
-                  className="inline-flex items-center gap-1 rounded bg-[#262626] border border-[#EF3038]/30 px-2 py-0.5 font-mono text-[11px] text-[#cccccc] tabular-nums"
-                >
-                  #{n} {participantByNumber.get(n)?.display_name}
-                </span>
-              ))}
-            </div>
-          )}
         </div>
       )}
 
-      {/* Stage Status & Announcement Banner */}
+      {/* Stage Announcement Banner */}
       <AnimatePresence mode="wait">
         {announcement && (
           <motion.div
             key={announcement}
-            initial={{ opacity: 0, y: -8 }}
+            initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
             className={cn(
-              "shrink-0 w-full rounded-lg border border-[#EF3038]/50 bg-[#EF3038]/10 text-center",
-              compact ? "px-3 py-1.5 flex items-center justify-center gap-3" : "px-4 py-3"
+              "shrink-0 rounded-lg border border-[#EF3038]/50 bg-[#EF3038]/10 text-center px-3 py-2",
             )}
           >
-            <p className={cn("font-display font-bold tracking-[0.14em] text-white uppercase", compact ? "text-sm sm:text-base" : "text-lg sm:text-2xl")}>
+            <p className={cn("font-display font-bold tracking-[0.12em] text-white uppercase", compact ? "text-sm" : "text-lg sm:text-2xl")}>
               {announcement}
             </p>
-            {latestResult && (
-              <p className={cn("text-xs text-[#999999]", compact ? "" : "mt-0.5")}>
-                Stage {latestResult.stage_number} published{" "}
-                {formatDateTime(latestResult.published_at)}
-              </p>
-            )}
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Interactive Tile Inspector Bar */}
+      {/* Inspector bar — normal mode only */}
       {inspectedParticipant && !compact && (
         <div className="flex items-center justify-between rounded-lg border border-white/15 bg-[#141414] px-4 py-2 text-xs">
           <span>
@@ -359,11 +335,11 @@ export function GridRandomiserArena({
         </div>
       )}
 
-      {/* White-tile Numbered Arena */}
+      {/* White-tile Numbered Arena — flex-1 so it fills remaining height in compact */}
       <div
         className={cn(
           "relative rounded-2xl border border-white/15 bg-[#080808] shadow-[0_0_60px_rgba(0,0,0,0.9)] overflow-hidden",
-          compact ? "p-2.5 sm:p-3 w-full flex-1 min-h-0 flex items-center justify-center" : "p-3 sm:p-6"
+          compact ? "flex-1 min-h-0 p-2 w-full" : "p-3 sm:p-6"
         )}
       >
         {isAnimating && (
@@ -373,7 +349,7 @@ export function GridRandomiserArena({
           />
         )}
 
-        <div className={cn("grid", compact ? "gap-1.5 sm:gap-2" : "gap-2 sm:gap-2.5", gridColsClass, gridMaxWidthClass)}>
+        <div className={cn("grid gap-1 sm:gap-1.5", gridColsClass, gridRowsClass, gridMaxWidthClass)}>
           {stageParticipants.map((p) => {
             const num = p.assigned_number;
             const isScanning = scanningNumber === num;
@@ -386,11 +362,11 @@ export function GridRandomiserArena({
                 type="button"
                 key={p.id}
                 onClick={() => setInspectedNumber(isInspected ? null : num)}
-                onMouseEnter={() => setInspectedNumber(num)}
+                onMouseEnter={() => !compact && setInspectedNumber(num)}
                 title={`${p.display_name} (#${num})`}
                 className={cn(
-                  "relative flex flex-col items-center justify-center rounded-md font-display font-bold tabular-nums transition-all duration-300 select-none overflow-hidden cursor-pointer",
-                  tileSizeClass,
+                  "relative flex flex-col items-center justify-center rounded-md font-display font-bold tabular-nums transition-all duration-300 select-none overflow-hidden cursor-pointer min-h-0",
+                  tileFontClass,
                   isScanning
                     ? "bg-[#FF2020] text-white scale-110 z-10 ring-2 ring-white shadow-[0_0_24px_rgba(255,32,32,0.9)]"
                     : isEliminated
@@ -404,7 +380,7 @@ export function GridRandomiserArena({
                 <span className={cn(isEliminated && "line-through decoration-[#EF3038]/70")}>
                   {num}
                 </span>
-                {count <= 25 && (
+                {count <= 25 && !compact && (
                   <span className="text-[10px] font-sans font-medium truncate max-w-[90%] px-1 text-[#555555]">
                     {p.display_name}
                   </span>
