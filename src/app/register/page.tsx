@@ -1,0 +1,178 @@
+"use client";
+
+import React, { useState } from "react";
+import Link from "next/link";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Loader2, CheckCircle2, UserPlus } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { registerSchema } from "@/lib/validations";
+import { Wordmark } from "@/components/brand/wordmark";
+import { Button } from "@/components/ui/button";
+import { Input, Label } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import type { z } from "zod";
+
+type RegisterValues = z.infer<typeof registerSchema>;
+
+export default function RegisterPage() {
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<RegisterValues>({
+    resolver: zodResolver(registerSchema),
+  });
+
+  const onSubmit = async (values: RegisterValues) => {
+    setError(null);
+    const supabase = createClient();
+    const { error: authError } = await supabase.auth.signUp({
+      email: values.email,
+      password: values.password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        data: {
+          full_name: values.fullName,
+          phone: values.phone,
+        },
+      },
+    });
+
+    if (authError) {
+      setError(authError.message);
+      return;
+    }
+
+    setSuccess(true);
+  };
+
+  return (
+    <div className="min-h-screen bg-[#080808] arena-grid-bg flex flex-col items-center justify-center px-4 py-12">
+      <div className="mb-8">
+        <Wordmark />
+      </div>
+
+      <Card className="w-full max-w-md border-white/10 bg-[#141414]">
+        <CardHeader>
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-[#EF3038] mb-1">
+            <UserPlus className="h-3.5 w-3.5" />
+            Competitor Registration
+          </div>
+          <CardTitle className="text-2xl">Create Account</CardTitle>
+          <p className="text-sm text-[#999999]">
+            Register once to enter raffles, submit MoMo payments, and claim your numbers.
+          </p>
+        </CardHeader>
+
+        <CardContent>
+          {success ? (
+            <div className="space-y-4 text-center py-4">
+              <CheckCircle2 className="h-12 w-12 text-[#36B879] mx-auto" />
+              <h3 className="font-display text-lg font-bold">Verify Your Email</h3>
+              <p className="text-sm text-[#999999]">
+                We sent a verification link to your email address. Confirm your email to
+                sign in and enter the active raffle.
+              </p>
+              <Link href="/login" className="block">
+                <Button className="w-full">Go to Sign In</Button>
+              </Link>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+              {error && (
+                <div className="rounded-md border border-[#FF2020]/40 bg-[#FF2020]/10 px-3.5 py-2.5 text-sm text-[#FF2020]">
+                  {error}
+                </div>
+              )}
+
+              <div>
+                <Label htmlFor="fullName">Full Name</Label>
+                <Input
+                  id="fullName"
+                  placeholder="Kwame Mensah"
+                  {...register("fullName")}
+                />
+                {errors.fullName && (
+                  <p className="mt-1 text-xs text-[#FF2020]">{errors.fullName.message}</p>
+                )}
+              </div>
+
+              <div>
+                <Label htmlFor="email">Email Address</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="kwame@example.com"
+                  {...register("email")}
+                />
+                {errors.email && (
+                  <p className="mt-1 text-xs text-[#FF2020]">{errors.email.message}</p>
+                )}
+              </div>
+
+              <div>
+                <Label htmlFor="phone">Phone Number (MoMo)</Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  placeholder="024 123 4567"
+                  {...register("phone")}
+                />
+                {errors.phone && (
+                  <p className="mt-1 text-xs text-[#FF2020]">{errors.phone.message}</p>
+                )}
+              </div>
+
+              <div>
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Minimum 8 characters"
+                  {...register("password")}
+                />
+                {errors.password && (
+                  <p className="mt-1 text-xs text-[#FF2020]">{errors.password.message}</p>
+                )}
+              </div>
+
+              <div>
+                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  placeholder="Repeat password"
+                  {...register("confirmPassword")}
+                />
+                {errors.confirmPassword && (
+                  <p className="mt-1 text-xs text-[#FF2020]">
+                    {errors.confirmPassword.message}
+                  </p>
+                )}
+              </div>
+
+              <Button type="submit" className="w-full" disabled={isSubmitting}>
+                {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                Create Account
+              </Button>
+            </form>
+          )}
+
+          {!success && (
+            <p className="mt-6 text-center text-sm text-[#999999]">
+              Already registered?{" "}
+              <Link href="/login" className="font-semibold text-white hover:text-[#EF3038]">
+                Sign in
+              </Link>
+            </p>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
