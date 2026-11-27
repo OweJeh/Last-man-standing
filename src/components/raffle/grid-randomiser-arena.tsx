@@ -24,21 +24,23 @@ const STAGE_ANNOUNCEMENTS: Record<number, string> = {
   4: "6 SURVIVORS REMAIN",
 };
 
-// Target stage animation durations (ms):
-// Stage 1 (100->50): 20s, Stage 2 (50->25): 13s, Stage 3 (25->12): 9s, Stage 4 (12->6): 6.5s
-const STAGE_DURATION_MS: Record<number, number> = {
-  1: 20_000,
-  2: 13_000,
-  3: 9_000,
-  4: 6_500,
-};
+interface StageAnimConfig {
+  durationMs: number;
+  huntMs: number;
+  hopMs: number;
+  scares: number;
+  scareHoldMs: number;
+}
 
-// Initial random-movement hunt duration before first tile dims (3s for Stage 1)
-const STAGE_HUNT_MS: Record<number, number> = {
-  1: 3_000,
-  2: 2_000,
-  3: 1_500,
-  4: 1_200,
+// Round 1: 20s fast scan (preserved)
+// Round 2: 18s gentler pace, deeper visible red
+// Round 3: 22s gentler pace + 8 scares (1s hold then moves away)
+// Round 4: 18s slower, dramatic & full of scares (7 scares)
+const STAGE_CONFIG: Record<number, StageAnimConfig> = {
+  1: { durationMs: 20_000, huntMs: 3_000, hopMs: 85, scares: 0, scareHoldMs: 0 },
+  2: { durationMs: 18_000, huntMs: 2_200, hopMs: 160, scares: 0, scareHoldMs: 0 },
+  3: { durationMs: 22_000, huntMs: 2_000, hopMs: 225, scares: 8, scareHoldMs: 1_000 },
+  4: { durationMs: 18_000, huntMs: 1_800, hopMs: 280, scares: 7, scareHoldMs: 1_000 },
 };
 
 export function GridRandomiserArena({
@@ -81,6 +83,7 @@ export function GridRandomiserArena({
   const [recentEliminated, setRecentEliminated] = useState<number[]>([]);
   const [isAnimating, setIsAnimating] = useState(false);
   const [isHunting, setIsHunting] = useState(false);
+  const [isScareHold, setIsScareHold] = useState(false);
   const [inspectedNumber, setInspectedNumber] = useState<number | null>(null);
 
   // Refs prevent router.refresh() / Realtime re-syncs from cancelling a running animation
@@ -103,6 +106,7 @@ export function GridRandomiserArena({
       setTrailNumbers([]);
       setIsAnimating(false);
       setIsHunting(false);
+      setIsScareHold(false);
       return;
     }
 
@@ -113,6 +117,7 @@ export function GridRandomiserArena({
       setTrailNumbers([]);
       setIsAnimating(false);
       setIsHunting(false);
+      setIsScareHold(false);
       return;
     }
 
@@ -125,78 +130,132 @@ export function GridRandomiserArena({
 
     setIsAnimating(true);
     setIsHunting(true);
+    setIsScareHold(false);
     setEliminatedInAnim(new Set());
     setRecentEliminated([]);
 
     let cancelled = false;
+    let pausedForLock = false;
+    const timeouts = new Set<ReturnType<typeof setTimeout>>();
+    const wait = (ms: number) =>
+      new Promise<void>((resolve) => {
+        const id = setTimeout(() => {
+          timeouts.delete(id);
+          resolve();
+        }, ms);
+        timeouts.add(id);
+      });
+
     const elimSet = new Set<number>();
     const allNums = stageNumsRef.current.length > 0 ? stageNumsRef.current : seq;
+    const cfg = STAGE_CONFIG[latestStageNumber] ?? STAGE_CONFIG[2];
 
-    const totalMs = STAGE_DURATION_MS[latestStageNumber] ?? 8_000;
-    const huntMs = STAGE_HUNT_MS[latestStageNumber] ?? 1_500;
-    const elimWindowMs = Math.max(2_000, totalMs - huntMs);
+    const totalScareMs = cfg.scares * cfg.scareHoldMs;
+    const elimWindowMs = Math.max(2_000, cfg.durationMs - cfg.huntMs - totalScareMs);
     const stepMs = Math.max(120, Math.round(elimWindowMs / seq.length));
 
-    // Random-hopping scanner runs continuously across surviving tiles for fun suspense
+    // Spread scares evenly across the elimination sequence
+    const scaresPerSlot = new Map<number, number>();
+    if (cfg.scares > 0 && seq.length > 0) {
+      for (let s = 0; s < cfg.scares; s += 1) {
+        const slot = Math.min(
+          seq.length - 1,
+          Math.floor(((s + 0.5) * seq.length) / cfg.scares)
+        );
+        scaresPerSlot.set(slot, (scaresPerSlot.get(slot) ?? 0) + 1);
+      }
+    }
+
+    // Random-hopping scanner runs continuously unless locked on a target or scare
     const hopTimer = setInterval(() => {
-      if (cancelled) return;
+      if (cancelled || pausedForLock) return;
       const alive = allNums.filter((n) => !elimSet.has(n));
       if (alive.length === 0) return;
       const randomPick = alive[Math.floor(Math.random() * alive.length)];
       setScanningNumber(randomPick);
-      setTrailNumbers((prev) => [randomPick, ...prev].slice(0, 4));
+      setTrailNumbers((prev) => [randomPick, ...prev].slice(0, latestStageNumber >= 2 ? 3 : 4));
       playScannerTick(soundEnabledRef.current);
-    }, 85);
+    }, cfg.hopMs);
 
-    let idx = 0;
-    let elimTimer: ReturnType<typeof setInterval> | null = null;
-
-    const startEliminationTimeout = setTimeout(() => {
+    const runTimeline = async () => {
+      await wait(cfg.huntMs);
       if (cancelled) return;
       setIsHunting(false);
 
-      const eliminateNext = () => {
+      const triggerScare = async (nextTarget?: number) => {
+        const alive = allNums.filter((n) => !elimSet.has(n));
+        if (alive.length === 0) return;
+        const candidates =
+          alive.length > 1 && nextTarget !== undefined
+            ? alive.filter((n) => n !== nextTarget)
+            : alive;
+        const scareNum = candidates[Math.floor(Math.random() * candidates.length)];
+
+        pausedForLock = true;
+        setIsScareHold(true);
+        setScanningNumber(scareNum);
+        setTrailNumbers((prev) => [scareNum, ...prev].slice(0, 3));
+        playScannerTick(soundEnabledRef.current);
+
+        await wait(cfg.scareHoldMs);
         if (cancelled) return;
-        if (idx >= seq.length) {
-          if (elimTimer) clearInterval(elimTimer);
-          clearInterval(hopTimer);
-          completedStageRef.current = latestStageNumber;
-          setScanningNumber(null);
-          setTrailNumbers([]);
-          setIsAnimating(false);
-          setIsHunting(false);
-          onCompleteRef.current?.(latestStageNumber);
-          return;
-        }
 
-        const targetNum = seq[idx];
-        const currentIdx = idx;
-        idx += 1;
-
-        // Lock scanner onto the target briefly, then dim it out
-        setScanningNumber(targetNum);
-        setTrailNumbers((prev) => [targetNum, ...prev].slice(0, 4));
-
-        setTimeout(() => {
-          if (cancelled) return;
-          elimSet.add(targetNum);
-          setEliminatedInAnim(new Set(elimSet));
-          setRecentEliminated((prev) => [targetNum, ...prev].slice(0, 8));
-          if (currentIdx % 2 === 0 || seq.length <= 15) {
-            playEliminationPulse(soundEnabledRef.current);
-          }
-        }, Math.floor(stepMs * 0.4));
+        // Move away without eliminating!
+        setIsScareHold(false);
+        pausedForLock = false;
+        await wait(Math.min(350, cfg.hopMs + 120));
       };
 
-      eliminateNext();
-      elimTimer = setInterval(eliminateNext, stepMs);
-    }, huntMs);
+      for (let idx = 0; idx < seq.length; idx += 1) {
+        if (cancelled) return;
+        const targetNum = seq[idx];
+
+        const scareCount = scaresPerSlot.get(idx) ?? 0;
+        for (let sc = 0; sc < scareCount; sc += 1) {
+          if (cancelled) return;
+          await triggerScare(targetNum);
+        }
+        if (cancelled) return;
+
+        // Lock onto elimination target, then dim it out
+        pausedForLock = latestStageNumber >= 2;
+        setScanningNumber(targetNum);
+        setTrailNumbers((prev) => [targetNum, ...prev].slice(0, latestStageNumber >= 2 ? 3 : 4));
+
+        const lockMs = Math.floor(stepMs * 0.4);
+        await wait(lockMs);
+        if (cancelled) return;
+
+        elimSet.add(targetNum);
+        setEliminatedInAnim(new Set(elimSet));
+        setRecentEliminated((prev) => [targetNum, ...prev].slice(0, 8));
+        if (idx % 2 === 0 || seq.length <= 15) {
+          playEliminationPulse(soundEnabledRef.current);
+        }
+        pausedForLock = false;
+
+        const restMs = Math.max(80, stepMs - lockMs);
+        await wait(restMs);
+      }
+
+      if (cancelled) return;
+      clearInterval(hopTimer);
+      completedStageRef.current = latestStageNumber;
+      setScanningNumber(null);
+      setTrailNumbers([]);
+      setIsAnimating(false);
+      setIsHunting(false);
+      setIsScareHold(false);
+      onCompleteRef.current?.(latestStageNumber);
+    };
+
+    void runTimeline();
 
     return () => {
       cancelled = true;
       clearInterval(hopTimer);
-      clearTimeout(startEliminationTimeout);
-      if (elimTimer) clearInterval(elimTimer);
+      for (const id of timeouts) clearTimeout(id);
+      timeouts.clear();
     };
   }, [latestStageNumber, reducedMotion]);
 
@@ -266,11 +325,15 @@ export function GridRandomiserArena({
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-[#EF3038] flex items-center gap-1">
                   <Radio className="h-2.5 w-2.5 animate-pulse" />
-                  {isHunting ? `Stage ${latestResult.stage_number} Scanning` : `Stage ${latestResult.stage_number} Live`}
+                  {isHunting
+                    ? `Stage ${latestResult.stage_number} Scanning`
+                    : isScareHold
+                    ? `Stage ${latestResult.stage_number} · Locking On...`
+                    : `Stage ${latestResult.stage_number} Live`}
                 </p>
                 <p className="text-xs font-bold text-white">
                   {scanningParticipant
-                    ? `${isHunting ? "Scanning" : "Targeting"} #${scanningParticipant.assigned_number}${compact ? "" : ` — ${scanningParticipant.display_name}`}`
+                    ? `${isHunting ? "Scanning" : isScareHold ? "Holding" : "Targeting"} #${scanningParticipant.assigned_number}${compact ? "" : ` — ${scanningParticipant.display_name}`}`
                     : "Scanning..."}
                 </p>
               </div>
@@ -357,6 +420,8 @@ export function GridRandomiserArena({
             const isEliminated = eliminatedInAnim.has(num);
             const isInspected = inspectedNumber === num;
 
+            const isDeepRed = latestStageNumber >= 2;
+
             return (
               <button
                 type="button"
@@ -365,14 +430,22 @@ export function GridRandomiserArena({
                 onMouseEnter={() => !compact && setInspectedNumber(num)}
                 title={`${p.display_name} (#${num})`}
                 className={cn(
-                  "relative flex flex-col items-center justify-center rounded-md font-display font-bold tabular-nums transition-all duration-300 select-none overflow-hidden cursor-pointer min-h-0",
+                  "relative flex flex-col items-center justify-center rounded-md font-display font-bold tabular-nums transition-all select-none overflow-hidden cursor-pointer min-h-0",
+                  isDeepRed ? "duration-500 ease-out" : "duration-300",
                   tileFontClass,
                   isScanning
-                    ? "bg-[#FF2020] text-white scale-110 z-10 ring-2 ring-white shadow-[0_0_24px_rgba(255,32,32,0.9)]"
+                    ? isDeepRed
+                      ? cn(
+                          "bg-[#B80018] text-white scale-110 z-10 ring-2 ring-[#FF5C6C] shadow-[0_0_30px_rgba(184,0,24,0.95)]",
+                          isScareHold && "animate-pulse scale-115 ring-white"
+                        )
+                      : "bg-[#FF2020] text-white scale-110 z-10 ring-2 ring-white shadow-[0_0_24px_rgba(255,32,32,0.9)]"
                     : isEliminated
                     ? "bg-[#303030] text-[#666666] opacity-70 scale-95"
                     : isInTrail
-                    ? "bg-white text-[#080808] ring-2 ring-[#EF3038]/80 shadow-[0_0_12px_rgba(239,48,56,0.5)]"
+                    ? isDeepRed
+                      ? "bg-[#FFE5E8] text-[#080808] ring-2 ring-[#C8001A] shadow-[0_0_16px_rgba(200,0,26,0.6)]"
+                      : "bg-white text-[#080808] ring-2 ring-[#EF3038]/80 shadow-[0_0_12px_rgba(239,48,56,0.5)]"
                     : "bg-white text-[#080808] shadow-sm hover:ring-2 hover:ring-[#EF3038]/60",
                   isInspected && !isScanning && "ring-2 ring-[#D8B66B]"
                 )}
