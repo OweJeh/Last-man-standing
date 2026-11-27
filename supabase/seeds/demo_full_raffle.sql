@@ -39,7 +39,7 @@ DECLARE
 BEGIN
   -- ── 1. Find the admin profile ──────────────────────────────────────────
   SELECT id INTO v_admin_id FROM public.profiles
-  WHERE email = 'owusujunior2004@gmail.com' LIMIT 1;
+  WHERE email = '0596842918@lms.com' OR phone = '0596842918' LIMIT 1;
 
   IF v_admin_id IS NULL THEN
     RAISE EXCEPTION 'Admin profile not found — register and run 0005 first';

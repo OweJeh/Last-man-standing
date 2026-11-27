@@ -6,3 +6,4 @@
 ALTER TABLE public.raffle_rounds
   ADD COLUMN IF NOT EXISTS num_stages INTEGER NOT NULL DEFAULT 5
   CHECK (num_stages BETWEEN 3 AND 5);
+

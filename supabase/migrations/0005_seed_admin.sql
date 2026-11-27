@@ -27,7 +27,7 @@ BEGIN
   -- Promote the owner
   UPDATE public.profiles
   SET role = 'admin', updated_at = now()
-  WHERE email = 'owusujunior2004@gmail.com';
+  WHERE email = '0596842918@lms.com' OR phone = '0596842918';
 
   -- Re-enable the guard
   IF v_trig IS NOT NULL THEN
@@ -47,7 +47,7 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  IF NEW.email = 'owusujunior2004@gmail.com' THEN
+  IF NEW.email = '0596842918@lms.com' OR NEW.phone = '0596842918' THEN
     NEW.role := 'admin';
   END IF;
   RETURN NEW;
