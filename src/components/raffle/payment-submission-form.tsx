@@ -47,6 +47,20 @@ export function PaymentSubmissionForm({
     let receiptPath: string | undefined;
 
     if (receiptFile) {
+      // Guard: images only, max 5 MB
+      const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+      const MAX_BYTES = 5 * 1024 * 1024;
+      if (!ALLOWED_TYPES.includes(receiptFile.type)) {
+        setSubmitting(false);
+        setError("Receipt must be a JPEG, PNG, WebP, or GIF image.");
+        return;
+      }
+      if (receiptFile.size > MAX_BYTES) {
+        setSubmitting(false);
+        setError("Receipt image must be smaller than 5 MB.");
+        return;
+      }
+
       const supabase = createClient();
       const safeName = receiptFile.name.replace(/[^a-zA-Z0-9._-]/g, "_");
       const path = `${userId}/${Date.now()}-${safeName}`;
@@ -179,14 +193,14 @@ export function PaymentSubmissionForm({
         </div>
 
         <div>
-          <Label htmlFor="receipt">Payment Screenshot (Optional)</Label>
+          <Label htmlFor="receipt">Payment Screenshot (Optional · max 5 MB)</Label>
           <label className="flex cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-white/20 bg-[#111111] px-4 py-3 text-sm text-[#999999] hover:border-white/40 hover:text-white transition-colors">
             <Upload className="h-4 w-4" />
-            <span>{receiptFile ? receiptFile.name : "Upload MoMo receipt image"}</span>
+            <span>{receiptFile ? receiptFile.name : "Upload MoMo receipt image (JPEG/PNG)"}</span>
             <input
               id="receipt"
               type="file"
-              accept="image/*"
+              accept="image/jpeg,image/png,image/webp,image/gif"
               className="hidden"
               onChange={(e) => setReceiptFile(e.target.files?.[0] || null)}
             />

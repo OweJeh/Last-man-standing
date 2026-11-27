@@ -3,6 +3,7 @@ import Link from "next/link";
 import { LayoutDashboard, Ticket, CreditCard, User, LogOut, Radio } from "lucide-react";
 import { requireUser, getCurrentProfile } from "@/lib/auth";
 import { signOutAction } from "@/app/actions/auth";
+import { emailToPhone } from "@/lib/validations";
 import { Wordmark } from "@/components/brand/wordmark";
 import { Button } from "@/components/ui/button";
 
@@ -39,7 +40,9 @@ export default async function DashboardLayout({
             <p className="text-xs font-semibold text-white truncate">
               {profile?.full_name}
             </p>
-            <p className="text-[11px] text-[#999999] truncate">{profile?.email}</p>
+            <p className="text-[11px] text-[#999999] truncate">
+              {profile?.phone ||
+                (profile?.email ? emailToPhone(profile.email) : "")}</p>
           </div>
 
           <nav className="flex md:flex-col gap-1 overflow-x-auto">
