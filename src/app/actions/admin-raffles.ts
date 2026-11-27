@@ -338,3 +338,83 @@ export async function archiveRaffleAction(roundId: string): Promise<ActionResult
   }
 }
 
+export async function deleteRaffleAction(roundId: string): Promise<ActionResult> {
+  try {
+    const admin = await assertAdminSession();
+    const supabase = createAdminSupabaseClient();
+
+    const { data: existing } = await supabase
+      .from("raffle_rounds")
+      .select("id, round_code, name, status")
+      .eq("id", roundId)
+      .single();
+
+    if (!existing) return { ok: false, error: "Raffle not found" };
+
+    // Clean up uploaded payment receipt files from storage first
+    const { data: payments } = await supabase
+      .from("payment_submissions")
+      .select("receipt_path")
+      .eq("round_id", roundId);
+
+    const receiptPaths = (payments ?? [])
+      .map((p) => p.receipt_path)
+      .filter((p): p is string => Boolean(p));
+
+    if (receiptPaths.length > 0) {
+      await supabase.storage.from("payment-receipts").remove(receiptPaths);
+    }
+
+    // Delete RESTRICT-referenced child tables in dependency order
+    const { error: winErr } = await supabase
+      .from("winners")
+      .delete()
+      .eq("round_id", roundId);
+    if (winErr) return { ok: false, error: winErr.message };
+
+    const { error: entErr } = await supabase
+      .from("entries")
+      .delete()
+      .eq("round_id", roundId);
+    if (entErr) return { ok: false, error: entErr.message };
+
+    const { error: payErr } = await supabase
+      .from("payment_submissions")
+      .delete()
+      .eq("round_id", roundId);
+    if (payErr) return { ok: false, error: payErr.message };
+
+    // Delete the raffle round (cascades raffle_stages, stage_results, raffle_events, draw_plans)
+    const { error: delErr } = await supabase
+      .from("raffle_rounds")
+      .delete()
+      .eq("id", roundId);
+    if (delErr) return { ok: false, error: delErr.message };
+
+    await supabase.from("audit_logs").insert({
+      actor_id: admin.id,
+      action: "RAFFLE_DELETED",
+      target_type: "raffle_round",
+      target_id: roundId,
+      previous_value: {
+        round_code: existing.round_code,
+        name: existing.name,
+        status: existing.status,
+      },
+    });
+
+    revalidatePath("/");
+    revalidatePath("/raffles");
+    revalidatePath("/winners");
+    revalidatePath("/admin");
+    revalidatePath("/admin/raffles");
+    revalidatePath("/admin/participants");
+    revalidatePath("/admin/payments");
+    revalidatePath("/admin/payouts");
+    revalidatePath("/admin/winners");
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Failed to delete raffle" };
+  }
+}
+

@@ -12,6 +12,8 @@ import {
   Maximize2,
   Minimize2,
   Radio,
+  RotateCcw,
+  X,
 } from "lucide-react";
 import {
   publishNextStageAction,
@@ -51,6 +53,8 @@ export function LiveControlClient({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isMaximized, setIsMaximized] = useState(false);
+  const [replayStage, setReplayStage] = useState<number | null>(null);
+  const [replayKey, setReplayKey] = useState(0);
 
   const canStart =
     round.status === "full" &&
@@ -61,6 +65,21 @@ export function LiveControlClient({
     round.status === "running" && round.current_stage >= 0 && round.current_stage < 5;
 
   const isCompleted = round.status === "completed" || round.status === "archived";
+  const isReplaying = replayStage !== null;
+  const canReplay = isCompleted && stageResults.length > 0;
+
+  const handleStartReplay = () => {
+    setReplayKey((k) => k + 1);
+    setReplayStage(1);
+  };
+
+  const handleNextReplayStage = () => {
+    setReplayStage((s) => (s !== null && s < 5 ? s + 1 : s));
+  };
+
+  const handleExitReplay = () => {
+    setReplayStage(null);
+  };
 
   const handleStart = async () => {
     setBusy(true);
@@ -175,6 +194,8 @@ export function LiveControlClient({
         initialStageResults={stageResults}
         initialWinners={winners}
         initialEvents={events}
+        replayStage={replayStage}
+        replayKey={replayKey}
       />
 
       {/* Compact Control Dock Below Arena (stays accessible even when maximized) */}
@@ -182,48 +203,104 @@ export function LiveControlClient({
         <div className="flex items-center gap-2 text-[11px] text-[#999999] min-w-0">
           <ShieldCheck className="h-3.5 w-3.5 text-[#36B879] shrink-0" />
           <span className="font-mono truncate max-w-[220px] sm:max-w-md">
-            {round.seed_commitment
+            {isReplaying
+              ? `Admin Replay · Stage ${replayStage} / 5`
+              : round.seed_commitment
               ? `Commit: ${round.seed_commitment}`
               : `Ready (${round.confirmed_entries_count}/${round.participant_capacity})`}
           </span>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Button
-            size="sm"
-            className="h-8 px-3 text-xs"
-            disabled={!canStart || busy}
-            onClick={handleStart}
-          >
-            {busy && canStart ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Play className="h-3.5 w-3.5" />
-            )}
-            Start Raffle
-          </Button>
-
-          <Button
-            variant="gold"
-            size="sm"
-            className="h-8 px-3 text-xs"
-            disabled={!canNextStage || busy}
-            onClick={handleNextStage}
-          >
-            {busy && canNextStage ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <SkipForward className="h-3.5 w-3.5" />
-            )}
-            {round.current_stage === 4 ? "Reveal Final Six" : "Next Round"}
-          </Button>
-
-          {isCompleted && (
-            <Link href={`/winners/${round.id}`}>
-              <Button variant="success" size="sm" className="h-8 px-3 text-xs">
-                View Results
+          {isReplaying ? (
+            <>
+              <Button
+                variant="gold"
+                size="sm"
+                className="h-8 px-3 text-xs"
+                disabled={replayStage >= 5}
+                onClick={handleNextReplayStage}
+              >
+                <SkipForward className="h-3.5 w-3.5" />
+                {replayStage === 4
+                  ? "Replay Final Six"
+                  : replayStage >= 5
+                  ? "Replay Complete"
+                  : `Next Replay (Stage ${replayStage + 1})`}
               </Button>
-            </Link>
+
+              <Button
+                variant="secondary"
+                size="sm"
+                className="h-8 px-3 text-xs"
+                onClick={handleStartReplay}
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                Restart
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 px-3 text-xs"
+                onClick={handleExitReplay}
+              >
+                <X className="h-3.5 w-3.5" />
+                Exit Replay
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                size="sm"
+                className="h-8 px-3 text-xs"
+                disabled={!canStart || busy}
+                onClick={handleStart}
+              >
+                {busy && canStart ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Play className="h-3.5 w-3.5" />
+                )}
+                Start Raffle
+              </Button>
+
+              <Button
+                variant="gold"
+                size="sm"
+                className="h-8 px-3 text-xs"
+                disabled={!canNextStage || busy}
+                onClick={handleNextStage}
+              >
+                {busy && canNextStage ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <SkipForward className="h-3.5 w-3.5" />
+                )}
+                {round.current_stage === 4 ? "Reveal Final Six" : "Next Round"}
+              </Button>
+
+              {isCompleted && (
+                <Link href={`/winners/${round.id}`}>
+                  <Button variant="success" size="sm" className="h-8 px-3 text-xs">
+                    View Results
+                  </Button>
+                </Link>
+              )}
+
+              {canReplay && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="h-8 px-3 text-xs border-[#D8B66B]/40 text-[#D8B66B] hover:bg-[#D8B66B]/10"
+                  onClick={handleStartReplay}
+                  title="Replay the exact draw round by round (admin only)"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  Replay
+                </Button>
+              )}
+            </>
           )}
         </div>
       </div>

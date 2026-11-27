@@ -3,11 +3,12 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Copy, Play, PowerOff, Radio, Send, Archive, Edit } from "lucide-react";
+import { Copy, Play, PowerOff, Radio, Send, Archive, Edit, Trash2 } from "lucide-react";
 import {
   activateRaffleAction,
   archiveRaffleAction,
   deactivateRaffleAction,
+  deleteRaffleAction,
   duplicateRaffleAction,
   publishRaffleAction,
 } from "@/app/actions/admin-raffles";
@@ -24,6 +25,7 @@ export function AdminRafflesListClient({ rounds }: { rounds: RaffleRound[] }) {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirmActivate, setConfirmActivate] = useState<RaffleRound | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<RaffleRound | null>(null);
 
   const runAction = async (
     id: string,
@@ -75,6 +77,41 @@ export function AdminRafflesListClient({ rounds }: { rounds: RaffleRound[] }) {
                 }}
               >
                 Confirm Activate
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Confirmation dialog for Delete Raffle */}
+      {confirmDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+          <Card className="max-w-md w-full bg-[#141414] border-[#FF2020]/50 p-6 space-y-4">
+            <h3 className="font-display text-xl font-bold text-[#FF2020]">
+              Delete Raffle Permanently?
+            </h3>
+            <p className="text-sm text-[#999999]">
+              Deleting <strong className="text-white">{confirmDelete.name}</strong> (
+              <span className="font-mono">{confirmDelete.round_code}</span>) will permanently
+              clear all of its entries, payment submissions, uploaded receipts, draw stages,
+              events, and winner records. This cannot be undone.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <Button variant="secondary" onClick={() => setConfirmDelete(null)}>
+                Cancel
+              </Button>
+              <Button
+                className="bg-[#FF2020] hover:bg-[#d91919] text-white"
+                onClick={async () => {
+                  const target = confirmDelete;
+                  setConfirmDelete(null);
+                  await runAction(target.id, () => deleteRaffleAction(target.id), {
+                    title: "Raffle deleted",
+                    description: `${target.round_code} and all associated records were removed.`,
+                  });
+                }}
+              >
+                Delete Permanently
               </Button>
             </div>
           </Card>
@@ -184,6 +221,18 @@ export function AdminRafflesListClient({ rounds }: { rounds: RaffleRound[] }) {
               >
                 <Copy className="h-3.5 w-3.5" />
                 Duplicate
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={busyId === r.id}
+                onClick={() => setConfirmDelete(r)}
+                className="text-[#FF2020] hover:text-[#FF2020] hover:bg-[#FF2020]/10"
+                title="Delete raffle and all associated data"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Delete
               </Button>
             </div>
           </Card>
