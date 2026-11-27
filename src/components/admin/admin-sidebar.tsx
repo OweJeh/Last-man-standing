@@ -47,6 +47,7 @@ export function AdminSidebar({ adminName, adminEmail }: AdminSidebarProps) {
     <aside
       className={cn(
         "shrink-0 border-b md:border-b-0 md:border-r border-white/10 bg-[#0d0d0d] flex flex-col justify-between transition-all duration-300 ease-in-out",
+        "md:sticky md:top-0 md:h-screen md:overflow-y-auto",
         collapsed ? "md:w-[68px] p-3" : "md:w-64 p-5"
       )}
     >

@@ -195,7 +195,7 @@ export function LiveControlClient({
       )}
 
       {/* Primary Broadcast Arena (Grid / Final Six / Winner Reveal) */}
-      <div className={isMaximized ? "flex-1 min-h-0 flex flex-col justify-center overflow-y-auto" : ""}>
+      <div className={isMaximized ? "flex-1 min-h-0 overflow-y-auto flex flex-col" : ""}>
         <LiveBroadcastClient
           embedded
           compact={isMaximized}
