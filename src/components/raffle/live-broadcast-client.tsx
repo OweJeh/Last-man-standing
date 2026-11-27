@@ -17,7 +17,6 @@ import { createClient } from "@/lib/supabase/client";
 import { formatGhs } from "@/lib/money";
 import { GridRandomiserArena } from "./grid-randomiser-arena";
 import { FinalSixStage } from "./final-six-stage";
-import { WinnerRevealStage } from "./winner-reveal-stage";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type {
@@ -368,26 +367,19 @@ export function LiveBroadcastClient({
           </div>
         )}
 
-        {/* Main Arena: Phases 1-4 Grid OR Phase 5 Final Six + Winner Reveal */}
+        {/* Main Arena: Phases 1-4 Grid OR Phase 5 Final Six -> Smooth Podium Transition */}
         {displayRound.current_stage >= 5 && finalSixParticipants.length > 0 ? (
-          <div className="space-y-6">
-            <FinalSixStage
-              key={isReplaying ? `replay-f6-${replayKey}` : "live-f6"}
-              finalSixParticipants={finalSixParticipants}
-              stage5Result={stage5Result}
-              soundEnabled={soundEnabled}
-              reducedMotion={reducedMotion}
-              onComplete={() => setFinalSixDone(true)}
-            />
-
-            {finalSixDone && displayWinners.length > 0 && (
-              <WinnerRevealStage
-                winners={displayWinners}
-                soundEnabled={soundEnabled}
-                reducedMotion={reducedMotion}
-              />
-            )}
-          </div>
+          <FinalSixStage
+            key={isReplaying ? `replay-f6-${replayKey}` : "live-f6"}
+            finalSixParticipants={finalSixParticipants}
+            stage5Result={stage5Result}
+            winners={displayWinners}
+            soundEnabled={soundEnabled}
+            reducedMotion={reducedMotion}
+            compact={compact}
+            showPodiumImmediately={!isReplaying && finalSixDone}
+            onComplete={() => setFinalSixDone(true)}
+          />
         ) : (
           <GridRandomiserArena
             key={isReplaying ? `replay-grid-${replayKey}` : "live-grid"}
