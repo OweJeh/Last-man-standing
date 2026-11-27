@@ -186,7 +186,9 @@ export function FinalSixStage({
     <div
       className={cn(
         "relative rounded-2xl border overflow-hidden transition-all duration-700",
-        compact ? "p-5 sm:p-7" : "p-6 sm:p-10",
+        compact
+          ? "h-full w-full flex flex-col justify-center p-4 sm:p-6"
+          : "p-6 sm:p-10",
         isPodiumVisible
           ? "border-[#D8B66B]/40 bg-[#080808] shadow-[0_0_90px_rgba(216,182,107,0.12)]"
           : isCountdown
