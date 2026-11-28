@@ -23,6 +23,7 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirect") || "/dashboard";
   const [error, setError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   const {
     register,
@@ -53,7 +54,7 @@ function LoginForm() {
     <div className="min-h-screen bg-[#080808] relative overflow-hidden flex flex-col items-center justify-center px-4 py-12">
       {/* Animated grid background */}
       <GridBackgroundAnimation
-        intensity="subtle"
+        intensity="vibrant"
         className="absolute inset-0 z-0"
       />
       {/* Top red radial glow */}
@@ -120,11 +121,20 @@ function LoginForm() {
               </div>
               <Input
                 id="password"
-                type="password"
+                type={showPassword ? "text" : "password"}
                 autoComplete="current-password"
                 placeholder="••••••••"
                 {...register("password")}
               />
+              <label className="mt-2 inline-flex items-center gap-2 text-xs text-[#999999] hover:text-white cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={showPassword}
+                  onChange={(e) => setShowPassword(e.target.checked)}
+                  className="h-3.5 w-3.5 rounded border-white/20 bg-[#111111] accent-[#EF3038] cursor-pointer"
+                />
+                Show password
+              </label>
               {errors.password && (
                 <p className="mt-1 text-xs text-[#FF2020]">{errors.password.message}</p>
               )}

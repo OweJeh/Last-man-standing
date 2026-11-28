@@ -20,6 +20,7 @@ export default function ForgotPasswordPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleRequestOtp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -150,7 +151,7 @@ export default function ForgotPasswordPage() {
                 <Label htmlFor="newPassword">New Password</Label>
                 <Input
                   id="newPassword"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   minLength={8}
                   required
                   value={newPassword}
@@ -163,7 +164,7 @@ export default function ForgotPasswordPage() {
                 <Label htmlFor="confirmPassword">Confirm New Password</Label>
                 <Input
                   id="confirmPassword"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   minLength={8}
                   required
                   value={confirmPassword}
@@ -171,6 +172,15 @@ export default function ForgotPasswordPage() {
                   placeholder="Repeat password"
                   autoComplete="new-password"
                 />
+                <label className="mt-2 inline-flex items-center gap-2 text-xs text-[#999999] hover:text-white cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={showPassword}
+                    onChange={(e) => setShowPassword(e.target.checked)}
+                    className="h-3.5 w-3.5 rounded border-white/20 bg-[#111111] accent-[#EF3038] cursor-pointer"
+                  />
+                  Show password
+                </label>
               </div>
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading && <Loader2 className="h-4 w-4 animate-spin" />}

@@ -22,7 +22,17 @@ export default async function RafflesPage() {
     .in("status", ["published", "live", "full", "locked", "running", "completed", "archived"])
     .order("created_at", { ascending: false });
 
-  const rounds = (data ?? []) as RaffleRound[];
+  const rawRounds = (data ?? []) as RaffleRound[];
+  const priority = (s: RaffleRound["status"]) =>
+    s === "live" ? 0 : s === "running" ? 1 : s === "locked" ? 2 : 3;
+
+  // Live raffles first, followed by all others ordered by most recent
+  const rounds = [...rawRounds].sort((a, b) => {
+    const pa = priority(a.status);
+    const pb = priority(b.status);
+    if (pa !== pb) return pa - pb;
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  });
   const liveRound = rounds.find((r) => r.status === "running" || r.status === "live");
 
   return (

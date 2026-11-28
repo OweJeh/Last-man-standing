@@ -71,6 +71,9 @@ export default async function HomePage() {
   const rounds = (roundsData ?? []) as RaffleRound[];
   const liveOrRunning = rounds.find((r) => r.status === "running" || r.status === "live");
   const activeEntryRound = rounds.find((r) => r.status === "live");
+  const featuredLiveRounds = rounds.filter(
+    (r) => r.status === "live" || r.status === "running"
+  );
   const recentWinners = (winnersData ?? []) as Array<
     Winner & { raffle_rounds?: { name: string; round_code: string } | null }
   >;
@@ -156,16 +159,21 @@ export default async function HomePage() {
           </Link>
         </div>
 
-        {rounds.length === 0 ? (
-          <Card className="bg-[#141414] border-white/10 p-10 text-center">
-            <p className="font-display text-lg font-bold">No Published Raffles Yet</p>
-            <p className="text-sm text-[#999999] mt-1">
-              An administrator will publish and activate the next competition shortly.
+        {featuredLiveRounds.length === 0 ? (
+          <Card className="bg-[#141414] border-white/10 p-10 text-center space-y-3">
+            <p className="font-display text-lg font-bold">No Live Raffle Right Now</p>
+            <p className="text-sm text-[#999999]">
+              An administrator will activate the next competition shortly.
             </p>
+            <Link href="/raffles" className="inline-block pt-1">
+              <Button variant="secondary" size="sm">
+                View All Raffles
+              </Button>
+            </Link>
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {rounds.map((round) => {
+            {featuredLiveRounds.map((round) => {
               const isCompleted =
                 round.status === "completed" || round.status === "archived";
               const isRunning = round.status === "running" || round.status === "locked";

@@ -8,6 +8,31 @@ export async function GET(
   const { roundId } = await context.params;
   const supabase = await createServerSupabaseClient();
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+  }
+
+  const [{ data: profile }, { count: entryCount }] = await Promise.all([
+    supabase.from("profiles").select("role").eq("id", user.id).single(),
+    supabase
+      .from("entries")
+      .select("id", { count: "exact", head: true })
+      .eq("round_id", roundId)
+      .eq("user_id", user.id),
+  ]);
+
+  const isAdmin = profile?.role === "admin";
+  if (!isAdmin && (entryCount ?? 0) === 0) {
+    return NextResponse.json(
+      { error: "Only participants in this raffle can access the live stream" },
+      { status: 403 }
+    );
+  }
+
   const { data: round } = await supabase
     .from("raffle_rounds")
     .select(
@@ -55,8 +80,7 @@ export async function GET(
     },
     {
       headers: {
-        // CDN absorbs spectator bursts so Postgres only sees ~1 query every 4s
-        "Cache-Control": "public, s-maxage=4, stale-while-revalidate=8",
+        "Cache-Control": "private, no-store",
       },
     }
   );

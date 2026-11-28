@@ -101,10 +101,11 @@ export function SplashScreen() {
     }
 
     setVisible(true);
-    // Remove pre-paint curtain once React splash overlay is active
-    const clearCurtain = window.requestAnimationFrame(() => {
+    // Keep the pre-paint curtain up slightly longer than 1 frame so the splash
+    // overlay is guaranteed painted before the curtain lifts (zero home flicker).
+    const clearCurtain = window.setTimeout(() => {
       document.documentElement.classList.remove("lms-splash-pending");
-    });
+    }, 120);
 
     // Mark shown only after animation starts so React StrictMode double-mount
     // doesn't skip the splash on the second mount.
@@ -123,8 +124,7 @@ export function SplashScreen() {
     // Remove from DOM entirely after done
     const done = window.setTimeout(() => setVisible(false), T.done);
     return () => {
-      window.cancelAnimationFrame(clearCurtain);
-      [markShown, ...timers, done].forEach(clearTimeout);
+      [clearCurtain, markShown, ...timers, done].forEach(clearTimeout);
     };
   }, []);
 
@@ -170,12 +170,12 @@ export function SplashScreen() {
             animate={{ scale: 1, opacity: phase >= T.appear ? 1 : 0 }}
             transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
           >
-            {/* Grid — compact logo-sized mark */}
+            {/* Grid — 1.4× scaled 2×2 cube */}
             <div className="relative">
               <div
-                className="grid grid-cols-2 gap-[3px] rounded-[4px] border p-[5px]"
+                className="grid grid-cols-2 gap-[4px] rounded-[6px] border p-[7px]"
                 style={{
-                  borderColor: "rgba(255,255,255,0.12)",
+                  borderColor: "rgba(255,255,255,0.14)",
                   background: "rgba(255,255,255,0.03)",
                 }}
               >
@@ -184,8 +184,8 @@ export function SplashScreen() {
                   return (
                     <motion.div
                       key={id}
-                      className="rounded-[2px]"
-                      style={{ width: 18, height: 18 }}
+                      className="rounded-[3px]"
+                      style={{ width: 25, height: 25 }}
                       animate={{
                         backgroundColor: v.bg,
                         boxShadow:       v.glow ?? "none",
@@ -199,29 +199,16 @@ export function SplashScreen() {
               </div>
             </div>
 
-            {/* ── Wordmark text ──────────────────────────────────────────── */}
+            {/* ── Wordmark text (without duplicate mini logo mark) ─────────── */}
             <motion.div
               className="flex flex-col items-center gap-3 text-center"
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: phase >= T.wordmark ? 1 : 0, y: phase >= T.wordmark ? 0 : 12 }}
               transition={{ duration: 0.7, ease: "easeOut" }}
             >
-              <div className="flex items-center gap-3">
-                {/* Mini logo mark inline */}
-                <span
-                  className="grid grid-cols-2 gap-[2px] rounded border border-white/15 bg-[#111111] p-[5px]"
-                  aria-hidden="true"
-                >
-                  <span className="h-2 w-2 rounded-[2px] bg-white" />
-                  <span className="h-2 w-2 rounded-[2px] bg-[#303030]" />
-                  <span className="h-2 w-2 rounded-[2px] bg-[#303030]" />
-                  <span className="h-2 w-2 rounded-[2px] bg-[#EF3038]" />
-                </span>
-
-                <span className="font-display text-2xl sm:text-3xl font-bold tracking-[0.18em] text-white uppercase">
-                  Last Man Standing
-                </span>
-              </div>
+              <span className="font-display text-2xl sm:text-3xl font-bold tracking-[0.18em] text-white uppercase">
+                Last Man Standing
+              </span>
 
               {/* Tagline */}
               <motion.p

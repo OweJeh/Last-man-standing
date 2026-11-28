@@ -11,6 +11,7 @@ import { Wordmark } from "@/components/brand/wordmark";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { GridBackgroundAnimation } from "@/components/ui/grid-bg-animation";
 import type { z } from "zod";
 
 type RegisterValues = z.infer<typeof registerSchema>;
@@ -18,6 +19,7 @@ type RegisterValues = z.infer<typeof registerSchema>;
 export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const {
     register,
@@ -52,12 +54,23 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#080808] arena-grid-bg flex flex-col items-center justify-center px-4 py-12">
-      <div className="mb-8">
+    <div className="min-h-screen bg-[#080808] relative overflow-hidden flex flex-col items-center justify-center px-4 py-12">
+      {/* Animated grid background */}
+      <GridBackgroundAnimation
+        intensity="vibrant"
+        className="absolute inset-0 z-0"
+      />
+      {/* Top red radial glow */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[radial-gradient(ellipse_at_top,rgba(239,48,56,0.16),transparent_70%)] z-[1]"
+      />
+
+      <div className="relative z-[2] mb-8">
         <Wordmark />
       </div>
 
-      <Card className="w-full max-w-md border-white/10 bg-[#141414]">
+      <Card className="relative z-[2] w-full max-w-md border-white/10 bg-[#141414]/90 backdrop-blur-sm">
         <CardHeader>
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-[#EF3038] mb-1">
             <UserPlus className="h-3.5 w-3.5" />
@@ -130,7 +143,7 @@ export default function RegisterPage() {
                 <Label htmlFor="password">Password</Label>
                 <Input
                   id="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   placeholder="Minimum 8 characters"
                   autoComplete="new-password"
                   {...register("password")}
@@ -144,7 +157,7 @@ export default function RegisterPage() {
                 <Label htmlFor="confirmPassword">Confirm Password</Label>
                 <Input
                   id="confirmPassword"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   placeholder="Repeat password"
                   autoComplete="new-password"
                   {...register("confirmPassword")}
@@ -154,6 +167,15 @@ export default function RegisterPage() {
                     {errors.confirmPassword.message}
                   </p>
                 )}
+                <label className="mt-2 inline-flex items-center gap-2 text-xs text-[#999999] hover:text-white cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={showPassword}
+                    onChange={(e) => setShowPassword(e.target.checked)}
+                    className="h-3.5 w-3.5 rounded border-white/20 bg-[#111111] accent-[#EF3038] cursor-pointer"
+                  />
+                  Show password
+                </label>
               </div>
 
               <Button type="submit" className="w-full" disabled={isSubmitting}>
