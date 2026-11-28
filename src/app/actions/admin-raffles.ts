@@ -52,9 +52,6 @@ export async function createRaffleAction(input: unknown): Promise<ActionResult<{
         second_prize_pesewas: financials.secondPrizePesewas,
         third_prize_pesewas: financials.thirdPrizePesewas,
         momo_instructions: v.momoInstructions || null,
-        cover_image_url: v.coverImageUrl || null,
-        opens_at: v.opensAt || null,
-        closes_at: v.closesAt || null,
         status: "draft",
         created_by: admin.id,
       })
@@ -135,9 +132,6 @@ export async function updateDraftRaffleAction(
         second_prize_pesewas: financials.secondPrizePesewas,
         third_prize_pesewas: financials.thirdPrizePesewas,
         momo_instructions: v.momoInstructions || null,
-        cover_image_url: v.coverImageUrl || null,
-        opens_at: v.opensAt || null,
-        closes_at: v.closesAt || null,
       })
       .eq("id", roundId);
 
@@ -269,6 +263,7 @@ export async function duplicateRaffleAction(sourceRoundId: string): Promise<Acti
         description: src.description,
         entry_fee_pesewas: src.entry_fee_pesewas,
         participant_capacity: src.participant_capacity,
+        num_stages: src.num_stages,
         gross_revenue_pesewas: src.gross_revenue_pesewas,
         owner_profit_pesewas: src.owner_profit_pesewas,
         prize_pool_pesewas: src.prize_pool_pesewas,
@@ -277,7 +272,6 @@ export async function duplicateRaffleAction(sourceRoundId: string): Promise<Acti
         second_prize_pesewas: src.second_prize_pesewas,
         third_prize_pesewas: src.third_prize_pesewas,
         momo_instructions: src.momo_instructions,
-        cover_image_url: src.cover_image_url,
         status: "draft",
         created_by: admin.id,
       })
@@ -352,20 +346,6 @@ export async function deleteRaffleAction(roundId: string): Promise<ActionResult>
       .single();
 
     if (!existing) return { ok: false, error: "Raffle not found" };
-
-    // Clean up uploaded payment receipt files from storage first
-    const { data: payments } = await supabase
-      .from("payment_submissions")
-      .select("receipt_path")
-      .eq("round_id", roundId);
-
-    const receiptPaths = (payments ?? [])
-      .map((p) => p.receipt_path)
-      .filter((p): p is string => Boolean(p));
-
-    if (receiptPaths.length > 0) {
-      await supabase.storage.from("payment-receipts").remove(receiptPaths);
-    }
 
     // Delete RESTRICT-referenced child tables in dependency order
     const { error: winErr } = await supabase

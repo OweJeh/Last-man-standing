@@ -10,7 +10,9 @@ export async function GET(
 
   const { data: round } = await supabase
     .from("raffle_rounds")
-    .select("*")
+    .select(
+      "id, round_code, name, description, entry_fee_pesewas, participant_capacity, num_stages, gross_revenue_pesewas, owner_profit_pesewas, prize_pool_pesewas, allocation_method, first_prize_pesewas, second_prize_pesewas, third_prize_pesewas, status, current_stage, confirmed_entries_count, started_at, completed_at"
+    )
     .eq("id", roundId)
     .in("status", ["published", "live", "full", "locked", "running", "completed", "archived"])
     .single();
@@ -43,12 +45,20 @@ export async function GET(
         .order("sequence_number", { ascending: true }),
     ]);
 
-  return NextResponse.json({
-    round,
-    participants: participants ?? [],
-    stageResults: stageResults ?? [],
-    winners: winners ?? [],
-    events: events ?? [],
-  });
+  return NextResponse.json(
+    {
+      round,
+      participants: participants ?? [],
+      stageResults: stageResults ?? [],
+      winners: winners ?? [],
+      events: events ?? [],
+    },
+    {
+      headers: {
+        // CDN absorbs spectator bursts so Postgres only sees ~1 query every 4s
+        "Cache-Control": "public, s-maxage=4, stale-while-revalidate=8",
+      },
+    }
+  );
 }
 

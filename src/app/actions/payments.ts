@@ -83,7 +83,6 @@ export async function submitPaymentAction(
         momo_provider: v.momoProvider,
         sender_phone: v.senderPhone,
         transaction_reference: normalizedRef,
-        receipt_path: v.receiptPath || null,
         status: "pending",
       })
       .select("id")

@@ -64,9 +64,6 @@ export const createRaffleSchema = z
     secondPrizeGhs: z.coerce.number().min(0).optional(),
     thirdPrizeGhs: z.coerce.number().min(0).optional(),
     momoInstructions: z.string().trim().max(1000).optional(),
-    coverImageUrl: z.string().trim().url().optional().or(z.literal("")),
-    opensAt: z.string().optional(),
-    closesAt: z.string().optional(),
   })
   .refine((data) => data.participantCapacity >= 5 + data.numStages, {
     message: "Participant capacity must be at least 5 + number of stages (e.g. 10 for 5 stages, 8 for 3 stages)",
@@ -86,7 +83,6 @@ export const paymentSubmissionSchema = z.object({
     .trim()
     .min(4, "Enter the MoMo transaction ID / reference")
     .max(80),
-  receiptPath: z.string().trim().optional(),
 });
 
 export const claimNumberSchema = z.object({

@@ -346,9 +346,9 @@ export default async function HomePage() {
             <Grid3X3 className="h-8 w-8 text-[#36B879]" />
             <div>
               <p className="text-xs uppercase tracking-wider text-[#999999]">
-                Fairness Engine
+                Draw Engine
               </p>
-              <p className="font-display text-xl font-bold">HMAC-SHA256</p>
+              <p className="font-display text-xl font-bold">Cryptographic</p>
             </div>
           </div>
         </div>
@@ -402,27 +402,26 @@ export default async function HomePage() {
           )}
         </div>
 
-        {/* Fairness & FAQ */}
+        {/* Security & FAQ */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="rounded-xl border border-white/10 bg-[#141414] p-6 sm:p-8 space-y-4">
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#36B879]">
               <ShieldCheck className="h-4 w-4" />
-              Provably Fair Architecture
+              Tamper-Proof Draw Engine
             </div>
             <h3 className="font-display text-2xl font-bold">
-              Committed Before the First Elimination
+              Locked Before the First Elimination
             </h3>
             <p className="text-sm text-[#999999] leading-relaxed">
-              Before Phase 1 begins, the server locks the canonical participant snapshot,
-              generates a 256-bit cryptographic seed, and publishes its SHA-256 commitment.
-              All five stages are computed deterministically via HMAC-SHA256 Fisher-Yates
-              with rejection sampling. After the final reveal, anyone can verify the
-              complete draw on the public fairness page.
+              Before Phase 1 begins, the server locks the participant snapshot and
+              computes every elimination stage deterministically using Node.js
+              cryptographic randomness so no one—including admins—can alter outcomes
+              mid-draw.
             </p>
             <ul className="space-y-2 text-sm text-white/90">
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-[#36B879]" />
-                No Math.random() — Node.js crypto only
+                Server-side cryptographic randomness only
               </li>
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-[#36B879]" />
@@ -430,7 +429,7 @@ export default async function HomePage() {
               </li>
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-[#36B879]" />
-                Publicly reproducible verification per round
+                Instant SMS congratulations for top 3 winners
               </li>
             </ul>
           </div>

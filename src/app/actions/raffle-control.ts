@@ -11,6 +11,9 @@ import {
   type PlannedWinner,
   type SnapshotParticipant,
 } from "@/lib/raffle-engine";
+import { formatGhs } from "@/lib/money";
+import { emailToPhone } from "@/lib/validations";
+import { sendArkeselSms } from "@/lib/sms/arkesel";
 import type { ActionResult } from "./admin-raffles";
 import type { PayoutStatus } from "@/types/database";
 
@@ -330,6 +333,39 @@ export async function publishNextStageAction(roundId: string): Promise<ActionRes
           result_hash: drawPlan.result_hash,
         },
       });
+
+      // Notify 1st, 2nd, and 3rd place winners via Arkesel SMS (non-blocking on SMS failure)
+      try {
+        const winnerUserIds = Array.from(new Set(winnerRows.map((w) => w.user_id)));
+        const { data: winnerProfiles } = await supabase
+          .from("profiles")
+          .select("id, phone, email")
+          .in("id", winnerUserIds);
+
+        const phoneByUserId = new Map<string, string>();
+        for (const prof of winnerProfiles ?? []) {
+          const phone = prof.phone || emailToPhone(prof.email ?? "");
+          if (phone) phoneByUserId.set(prof.id, phone);
+        }
+
+        const placeLabels: Record<1 | 2 | 3, string> = {
+          1: "1st Place",
+          2: "2nd Place",
+          3: "3rd Place",
+        };
+
+        await Promise.allSettled(
+          winnerRows.map((w) => {
+            const phone = phoneByUserId.get(w.user_id);
+            if (!phone) return Promise.resolve();
+            const prizeText = formatGhs(w.prize_pesewas);
+            const msg = `CONGRATS ${w.display_name}! You won ${placeLabels[w.position]} in ${round.name} (#${w.assigned_number}) — Prize: ${prizeText}! Our team will contact you for MoMo payout. - Last Man Standing`;
+            return sendArkeselSms(phone, msg);
+          })
+        );
+      } catch (smsErr) {
+        console.error("[Winner SMS] Dispatch error:", smsErr);
+      }
     } else {
       await supabase
         .from("raffle_rounds")
@@ -349,7 +385,6 @@ export async function publishNextStageAction(roundId: string): Promise<ActionRes
     revalidatePath(`/live/${roundId}`);
     revalidatePath("/winners");
     revalidatePath(`/winners/${roundId}`);
-    revalidatePath(`/fairness/${roundId}`);
     return { ok: true };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Failed to publish stage" };

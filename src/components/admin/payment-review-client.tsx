@@ -2,8 +2,9 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, X, Eye, Search } from "lucide-react";
+import { Check, X, Search } from "lucide-react";
 import { reviewPaymentAction } from "@/app/actions/payments";
+import { emailToPhone } from "@/lib/validations";
 import { formatGhs } from "@/lib/money";
 import { formatDateTime } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -18,7 +19,6 @@ export interface AdminPaymentRow {
   momo_provider: string;
   sender_phone: string;
   transaction_reference: string;
-  receipt_path: string | null;
   status: string;
   admin_notes: string | null;
   created_at: string;
@@ -39,7 +39,6 @@ export function PaymentReviewClient({
   const [notesById, setNotesById] = useState<Record<string, string>>({});
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [receiptUrl, setReceiptUrl] = useState<string | null>(null);
 
   const filtered = payments.filter((p) => {
     if (p.status !== tab) return false;
@@ -48,7 +47,7 @@ export function PaymentReviewClient({
     return (
       p.transaction_reference.toLowerCase().includes(q) ||
       p.sender_phone.toLowerCase().includes(q) ||
-      (p.profiles?.email ?? "").toLowerCase().includes(q) ||
+      emailToPhone(p.profiles?.email ?? "").toLowerCase().includes(q) ||
       (p.profiles?.full_name ?? "").toLowerCase().includes(q)
     );
   });
@@ -69,34 +68,8 @@ export function PaymentReviewClient({
     router.refresh();
   };
 
-  const openReceipt = async (path: string) => {
-    const res = await fetch(`/api/admin/receipt?path=${encodeURIComponent(path)}`);
-    const data = await res.json();
-    if (data.signedUrl) {
-      setReceiptUrl(data.signedUrl);
-    }
-  };
-
   return (
     <div className="space-y-5">
-      {receiptUrl && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4"
-          onClick={() => setReceiptUrl(null)}
-        >
-          <div className="max-w-lg w-full rounded-xl border border-white/20 bg-[#141414] p-4 space-y-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={receiptUrl}
-              alt="Payment receipt"
-              className="w-full max-h-[70vh] object-contain rounded"
-            />
-            <Button variant="secondary" className="w-full" onClick={() => setReceiptUrl(null)}>
-              Close Preview
-            </Button>
-          </div>
-        </div>
-      )}
 
       {error && (
         <div className="rounded-md border border-[#FF2020]/40 bg-[#FF2020]/10 p-3 text-sm text-[#FF2020]">
@@ -164,23 +137,12 @@ export function PaymentReviewClient({
                     {formatGhs(p.amount_pesewas)} · {p.momo_provider} ({p.sender_phone})
                   </p>
                   <p className="text-xs text-[#999999]">
-                    {p.profiles?.full_name} ({p.profiles?.email}) ·{" "}
+                    {p.profiles?.full_name} ({emailToPhone(p.profiles?.email ?? "")}) ·{" "}
                     {formatDateTime(p.created_at)}
                   </p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
-                  {p.receipt_path && (
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => openReceipt(p.receipt_path!)}
-                    >
-                      <Eye className="h-3.5 w-3.5" />
-                      Receipt
-                    </Button>
-                  )}
-
                   {p.status === "pending" && (
                     <>
                       <Input

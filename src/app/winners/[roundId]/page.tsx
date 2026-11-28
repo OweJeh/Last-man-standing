@@ -1,7 +1,6 @@
 import React from "react";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ShieldCheck, Trophy } from "lucide-react";
+import { Trophy } from "lucide-react";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth";
 import { formatGhs } from "@/lib/money";
@@ -9,7 +8,6 @@ import { formatDateTime } from "@/lib/utils";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { RaffleRound, StageResult, Winner } from "@/types/database";
 
@@ -69,12 +67,6 @@ export default async function WinnerDetailPage({
               </p>
             )}
           </div>
-          <Link href={`/fairness/${round.id}`}>
-            <Button variant="secondary">
-              <ShieldCheck className="h-4 w-4 text-[#36B879]" />
-              Verify Draw Fairness
-            </Button>
-          </Link>
         </div>
 
         {/* Podium */}

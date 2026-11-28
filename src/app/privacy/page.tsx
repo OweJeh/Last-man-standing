@@ -12,17 +12,14 @@ export default async function PrivacyPage() {
         <h1 className="font-display text-3xl font-bold">Privacy Policy</h1>
         <div className="space-y-4 text-sm text-[#999999] leading-relaxed">
           <p>
-            We collect your full name, email address, phone number, and MoMo payment
-            verification details solely to administer entries and prize payouts.
+            We collect your full name, phone number, and MoMo transaction reference
+            solely to administer entries, send draw notifications, and process prize
+            payouts.
           </p>
           <p>
             Your MoMo account name and phone number are never displayed publicly. Only
             your chosen public display name and assigned number appear on the live grid
             and winner reveal.
-          </p>
-          <p>
-            Uploaded payment receipts are stored in private encrypted storage accessible
-            only to you and authorized administrators.
           </p>
         </div>
       </main>

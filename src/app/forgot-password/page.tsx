@@ -2,40 +2,60 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { Loader2, Smartphone, CheckCircle2 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
-import { phoneToEmail } from "@/lib/validations";
+import { Loader2, Smartphone, KeyRound, CheckCircle2 } from "lucide-react";
+import {
+  requestPasswordResetOtpAction,
+  verifyPasswordResetOtpAction,
+} from "@/app/actions/auth";
 import { Wordmark } from "@/components/brand/wordmark";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function ForgotPasswordPage() {
+  const [step, setStep] = useState<"phone" | "otp" | "done">("phone");
   const [phone, setPhone] = useState("");
+  const [otp, setOtp] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleRequestOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!phone.trim()) return;
     setLoading(true);
     setError(null);
 
-    const supabase = createClient();
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(
-      phoneToEmail(phone),
-      {
-        redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
-      }
-    );
-
+    const res = await requestPasswordResetOtpAction(phone);
     setLoading(false);
-    if (resetError) {
-      setError(resetError.message);
+    if (!res.ok) {
+      setError(res.error || "Could not send SMS code");
       return;
     }
-    setSent(true);
+    setStep("otp");
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+
+    const res = await verifyPasswordResetOtpAction({
+      phone,
+      otp,
+      newPassword,
+    });
+    setLoading(false);
+    if (!res.ok) {
+      setError(res.error || "Password reset failed");
+      return;
+    }
+    setStep("done");
   };
 
   return (
@@ -48,26 +68,26 @@ export default function ForgotPasswordPage() {
         <CardHeader>
           <CardTitle className="text-2xl">Reset Password</CardTitle>
           <p className="text-sm text-[#999999]">
-            Enter your registered phone number and we will send you a password reset link.
+            {step === "phone"
+              ? "Enter your registered phone number to receive a 6-digit SMS verification code."
+              : step === "otp"
+              ? `Enter the 6-digit SMS code sent to ${phone.replace(/\D/g, "")} and choose a new password.`
+              : "Your password has been updated."}
           </p>
         </CardHeader>
         <CardContent>
-          {sent ? (
+          {step === "done" ? (
             <div className="space-y-4 text-center py-4">
               <CheckCircle2 className="h-10 w-10 text-[#36B879] mx-auto" />
               <p className="text-sm text-[#999999]">
-                If an account exists for{" "}
-                <strong className="text-white">{phone.replace(/\D/g, "")}</strong>, a
-                reset link has been dispatched. Check your registered contact.
+                You can now sign in with your phone number and new password.
               </p>
               <Link href="/login">
-                <Button variant="secondary" className="w-full">
-                  Return to Sign In
-                </Button>
+                <Button className="w-full">Go to Sign In</Button>
               </Link>
             </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
+          ) : step === "phone" ? (
+            <form onSubmit={handleRequestOtp} className="space-y-4">
               {error && (
                 <div className="rounded-md border border-[#FF2020]/40 bg-[#FF2020]/10 px-3.5 py-2.5 text-sm text-[#FF2020]">
                   {error}
@@ -92,7 +112,7 @@ export default function ForgotPasswordPage() {
               </div>
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-                Send Reset Link
+                Send SMS Code
               </Button>
               <Link
                 href="/login"
@@ -101,10 +121,75 @@ export default function ForgotPasswordPage() {
                 Back to Sign In
               </Link>
             </form>
+          ) : (
+            <form onSubmit={handleVerifyOtp} className="space-y-4">
+              {error && (
+                <div className="rounded-md border border-[#FF2020]/40 bg-[#FF2020]/10 px-3.5 py-2.5 text-sm text-[#FF2020]">
+                  {error}
+                </div>
+              )}
+              <div>
+                <Label htmlFor="otp">
+                  <span className="flex items-center gap-1.5">
+                    <KeyRound className="h-3.5 w-3.5 text-[#D8B66B]" />
+                    6-Digit SMS Code
+                  </span>
+                </Label>
+                <Input
+                  id="otp"
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  required
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+                  placeholder="123456"
+                />
+              </div>
+              <div>
+                <Label htmlFor="newPassword">New Password</Label>
+                <Input
+                  id="newPassword"
+                  type="password"
+                  minLength={8}
+                  required
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Minimum 8 characters"
+                  autoComplete="new-password"
+                />
+              </div>
+              <div>
+                <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  minLength={8}
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Repeat password"
+                  autoComplete="new-password"
+                />
+              </div>
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+                Reset Password
+              </Button>
+              <button
+                type="button"
+                onClick={() => {
+                  setStep("phone");
+                  setError(null);
+                }}
+                className="w-full text-center text-sm text-[#999999] hover:text-white"
+              >
+                Use a different phone number
+              </button>
+            </form>
           )}
         </CardContent>
       </Card>
     </div>
   );
 }
-

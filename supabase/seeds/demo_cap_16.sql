@@ -76,3 +76,4 @@ BEGIN
   RAISE NOTICE 'Demo 16-player raffle created: round_id = %, round_code = DEMO-016', v_round_id;
 END;
 $$;
+

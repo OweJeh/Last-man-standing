@@ -263,8 +263,10 @@ export function LiveControlClient({
           <span className="font-mono truncate max-w-[180px] sm:max-w-xs">
             {isReplaying
               ? `Replay · Stage ${replayStage} / ${totalStages}`
-              : round.seed_commitment
-              ? `Commit: ${round.seed_commitment}`
+              : round.status === "running"
+              ? `Live · Stage ${round.current_stage} / ${totalStages}`
+              : round.status === "completed"
+              ? `Completed · ${totalStages} Stages`
               : `Ready (${round.confirmed_entries_count}/${round.participant_capacity})`}
           </span>
         </div>

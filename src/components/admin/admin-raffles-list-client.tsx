@@ -93,8 +93,8 @@ export function AdminRafflesListClient({ rounds }: { rounds: RaffleRound[] }) {
             <p className="text-sm text-[#999999]">
               Deleting <strong className="text-white">{confirmDelete.name}</strong> (
               <span className="font-mono">{confirmDelete.round_code}</span>) will permanently
-              clear all of its entries, payment submissions, uploaded receipts, draw stages,
-              events, and winner records. This cannot be undone.
+              clear all of its entries, payment submissions, draw stages, events, and
+              winner records. This cannot be undone.
             </p>
             <div className="flex gap-3 justify-end">
               <Button variant="secondary" onClick={() => setConfirmDelete(null)}>

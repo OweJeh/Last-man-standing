@@ -1,7 +1,7 @@
 import React from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Radio, ShieldCheck, CheckCircle2, Clock } from "lucide-react";
+import { Radio, CheckCircle2, Clock } from "lucide-react";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth";
 import { formatGhs } from "@/lib/money";
@@ -123,12 +123,6 @@ export default async function RaffleDetailPage({
               <Button variant="secondary">
                 <Radio className="h-4 w-4 text-[#EF3038]" />
                 Live Broadcast View
-              </Button>
-            </Link>
-            <Link href={`/fairness/${round.id}`}>
-              <Button variant="outline">
-                <ShieldCheck className="h-4 w-4 text-[#36B879]" />
-                Fairness
               </Button>
             </Link>
           </div>
@@ -257,12 +251,12 @@ export default async function RaffleDetailPage({
 
                 <PaymentSubmissionForm
                   roundId={round.id}
-                  userId={profile.id}
                   entryFeePesewas={round.entry_fee_pesewas}
                   momoInstructions={round.momo_instructions}
                   defaultMomoNetwork={settings.default_momo_network}
                   defaultMomoNumber={settings.default_momo_number}
                   defaultMomoAccountName={settings.default_momo_account_name}
+                  defaultSenderPhone={profile.phone || ""}
                 />
               </>
             )}

@@ -10,8 +10,8 @@ export function Footer() {
           <div className="space-y-3">
             <Wordmark />
             <p className="text-xs leading-relaxed text-[#999999]">
-              One Number. One Chance. Last Man Standing. Cryptographically verifiable
-              grid-elimination competition.
+              One Number. One Chance. Last Man Standing. Live televised-grade grid
+              elimination competition.
             </p>
           </div>
 
@@ -68,7 +68,7 @@ export function Footer() {
 
           <div>
             <h4 className="font-display text-xs font-bold uppercase tracking-wider text-white mb-3">
-              Legal & Fairness
+              Legal
             </h4>
             <ul className="space-y-2 text-sm text-[#999999]">
               <li>
@@ -92,7 +92,7 @@ export function Footer() {
 
         <div className="mt-10 border-t border-white/10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#666666]">
           <p>© {new Date().getFullYear()} Last Man Standing Raffle. All rights reserved.</p>
-          <p>18+ Only. Deterministic HMAC-SHA256 Draw Verification.</p>
+          <p>18+ Only. Play Responsibly.</p>
         </div>
       </div>
     </footer>

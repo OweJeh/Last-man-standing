@@ -2,8 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Upload, CheckCircle2, Smartphone } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { Loader2, CheckCircle2, Smartphone } from "lucide-react";
 import { submitPaymentAction } from "@/app/actions/payments";
 import { formatGhs } from "@/lib/money";
 import { Button } from "@/components/ui/button";
@@ -11,30 +10,29 @@ import { Input, Label } from "@/components/ui/input";
 
 interface PaymentSubmissionFormProps {
   roundId: string;
-  userId: string;
   entryFeePesewas: number;
   momoInstructions: string | null;
   defaultMomoNetwork: string;
   defaultMomoNumber: string;
   defaultMomoAccountName: string;
+  defaultSenderPhone?: string;
 }
 
 export function PaymentSubmissionForm({
   roundId,
-  userId,
   entryFeePesewas,
   momoInstructions,
   defaultMomoNetwork,
   defaultMomoNumber,
   defaultMomoAccountName,
+  defaultSenderPhone = "",
 }: PaymentSubmissionFormProps) {
   const router = useRouter();
   const [momoProvider, setMomoProvider] = useState<"MTN MoMo" | "Telecel Cash" | "AT Money">(
     "MTN MoMo"
   );
-  const [senderPhone, setSenderPhone] = useState("");
+  const [senderPhone, setSenderPhone] = useState(defaultSenderPhone);
   const [transactionReference, setTransactionReference] = useState("");
-  const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
@@ -44,44 +42,11 @@ export function PaymentSubmissionForm({
     setSubmitting(true);
     setError(null);
 
-    let receiptPath: string | undefined;
-
-    if (receiptFile) {
-      // Guard: images only, max 5 MB
-      const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-      const MAX_BYTES = 5 * 1024 * 1024;
-      if (!ALLOWED_TYPES.includes(receiptFile.type)) {
-        setSubmitting(false);
-        setError("Receipt must be a JPEG, PNG, WebP, or GIF image.");
-        return;
-      }
-      if (receiptFile.size > MAX_BYTES) {
-        setSubmitting(false);
-        setError("Receipt image must be smaller than 5 MB.");
-        return;
-      }
-
-      const supabase = createClient();
-      const safeName = receiptFile.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-      const path = `${userId}/${Date.now()}-${safeName}`;
-      const { error: uploadError } = await supabase.storage
-        .from("payment-receipts")
-        .upload(path, receiptFile, { upsert: false });
-
-      if (uploadError) {
-        setSubmitting(false);
-        setError(`Receipt upload failed: ${uploadError.message}`);
-        return;
-      }
-      receiptPath = path;
-    }
-
     const res = await submitPaymentAction({
       roundId,
       momoProvider,
       senderPhone,
       transactionReference,
-      receiptPath,
     });
 
     setSubmitting(false);
@@ -91,9 +56,7 @@ export function PaymentSubmissionForm({
     }
 
     setSubmitted(true);
-    setSenderPhone("");
     setTransactionReference("");
-    setReceiptFile(null);
     router.refresh();
   };
 
@@ -190,21 +153,6 @@ export function PaymentSubmissionForm({
               placeholder="e.g. 49102938471"
             />
           </div>
-        </div>
-
-        <div>
-          <Label htmlFor="receipt">Payment Screenshot (Optional · max 5 MB)</Label>
-          <label className="flex cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-white/20 bg-[#111111] px-4 py-3 text-sm text-[#999999] hover:border-white/40 hover:text-white transition-colors">
-            <Upload className="h-4 w-4" />
-            <span>{receiptFile ? receiptFile.name : "Upload MoMo receipt image (JPEG/PNG)"}</span>
-            <input
-              id="receipt"
-              type="file"
-              accept="image/jpeg,image/png,image/webp,image/gif"
-              className="hidden"
-              onChange={(e) => setReceiptFile(e.target.files?.[0] || null)}
-            />
-          </label>
         </div>
 
         <Button type="submit" size="lg" className="w-full" disabled={submitting}>
